@@ -1,0 +1,12 @@
+Esto va ser un port de las librerías FAST de Manu Roibal que ha donado como Open Source.
+\fastclipper  --> Directorio que contiene code source de 16 bits, donado por Manu Roibal
+\fastharbour  --> Directorio que contiene code source portado a Harbour.
+
+Este repositorio será un paso previo a que este listo para enviarlo al proyecto Harbour.
+Una vez en Harbour, no tendrá sentido y será eliminado.
+
+Saludos
+Rafa Carmona
+
+
+
