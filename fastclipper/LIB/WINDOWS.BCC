@@ -1,0 +1,186 @@
+/* 
+------------------------------------------------------------------------
+FASTlib for Clipper, including all source code, examples and any other 
+file has been donated to Open Source community
+
+Manu Roibal. Bilbao, May 7 2011
+
+------------------------------------------------------------------------
+Please, contact me at	manuroibal@gmail.com
+Follow me at Twitter	@manuroibal on Twitter
+My Linkedin profile	www.linkedin.com/manuroibal
+
+Or visit my web site at	www.tonsofit.com
+------------------------------------------------------------------------
+*/
+
+
+#pragma inline
+
+#include "\libs\clipapi\clipapi.h"
+
+
+extern WORD strlen( const char * );
+
+
+HIDE void Shadow( WORD nY1, WORD nX1, WORD nY2, WORD nX2 )
+  {
+  INDEX  nInd;
+  WORD   nLen    = ( nY2 - nY1 + 1 ) * ( nX2 - nX1 + 1 ) * 2;
+  HANDLE hSeg    = _vAlloc( nLen, 0 );
+  LPBYTE cBuffer = _vLock( hSeg );
+
+  if ( ! _fastIsFastGT() )
+    {
+    _gtSave( nY1, nX1, nY2, nX2, cBuffer );
+    for ( nInd = 1; nInd < nLen; nInd += 2 )
+      cBuffer[ nInd ] = 0x8;
+    _gtRest( nY1, nX1, nY2, nX2, cBuffer );
+    }
+  _vUnLock( hSeg );
+  _vFree( hSeg );
+  }
+
+
+
+HIDE WORD InitPos( WORD nPos, WORD nDefault )
+  {
+  return( ( ( _parinfo( nPos ) == 0 ) ? nDefault : _parni( nPos ) ) );
+  }
+
+
+
+
+HIDE void ComunOpenBox( LPBYTE cColor, LPWORD nCursor, COLOR * sOld, COLOR * sNew )
+  {
+  _gtGetCursor( nCursor );
+  _gtSetCursor( 0 );
+  _gtGetColor( sOld );
+  if ( cColor != NULL )
+    _fastColor( cColor, sNew );
+  else
+    _gtGetColor( sNew );
+  _gtSetColor( sNew );
+  }
+
+
+
+
+HIDE void ComunCloseBox( BOOL lSombra, WORD nY1, WORD nX1, WORD nY2,
+                         WORD nX2, LPBYTE cTitulo, WORD nLenTit,
+                         WORD nCursor, COLOR * sOld )
+  {
+  if ( lSombra && nY2 < _gtMaxRow() && nX2 < _gtMaxCol() )
+    {
+    Shadow( nY2 + 1, nX1 + 2, nY2 + 1, nX2 );
+    Shadow( nY1 + 1, nX2 + 1, nY2 + 1, nX2 + 2 );
+    }
+  if ( nLenTit > 0 )
+    {
+    _gtSetPos( nY1, nX1 + ( nX2 - nX1 + 1 - strlen( (LPSTR)cTitulo ) ) / 2 - 1 );
+    _gtWrite( (LPBYTE)" ", 1 );
+    _gtWrite( cTitulo, strlen( (LPSTR)cTitulo ) );
+    _gtWrite( (LPBYTE)" ", 1 );
+    }
+  _gtSetCursor( nCursor );
+  _gtSetColor( sOld );
+ }
+
+
+
+CLIPPER Window()
+  {
+  int    nY1     = InitPos( 1, 0 );
+  int    nX1     = InitPos( 2, 0 );
+  int    nY2     = InitPos( 3, _gtMaxRow() );
+  int    nX2     = InitPos( 4, _gtMaxCol() );
+  LPBYTE cTitulo = ( ( _parinfo( 5 ) == 0 ) ? NULL : (LPBYTE)_parc( 5 ) );
+  WORD   nLenTit = _parclen( 5 );
+  LPBYTE cCaja   = (LPBYTE)_parc( 6 );
+  BOOL   lSombra = _parl( 7 );
+  LPBYTE cColor  = ( ( _parinfo( 8 ) == 0 ) ? NULL : (LPBYTE)_parc( 8 ) );
+  BOOL   lEfecto = ( ( _parinfo( 9 ) == 0 ) ? TRUE : _parl( 9 ) );
+  int    nMx     = nX1 + ( nX2 - nX1 ) / 2;
+  int    nMy     = nY1 + ( nY2 - nY1 ) / 2;
+  int    nIx     = nX1 + ( nX2 - nX1 ) / 2;
+  int    nIy     = nY1 + ( nY2 - nY1 ) / 2;
+  WORD   nCursor;
+  COLOR  sOld;
+  COLOR  sNew;
+
+  _fastForce();
+  ComunOpenBox( cColor, & nCursor, & sOld, & sNew );
+  if ( lEfecto )
+    while( nIx > nX1 || nMx < nX2 || nIy > nY1 || nMy < nY2 )
+      {
+      nIy = _fastMax( --nIy, nY1 );
+      nIx = _fastMax( --nIx, nX1 );
+      nMy = _fastMin( ++nMy, nY2 );
+      nMx = _fastMin( ++nMx, nX2 );
+      _gtBox( nIy, nIx, nMy, nMx, cCaja );
+      }
+  _gtBox( nY1, nX1, nY2, nX2, cCaja );
+  ComunCloseBox( lSombra, nY1, nX1, nY2, nX2, cTitulo, nLenTit, nCursor, & sOld );
+  }
+
+
+
+HIDE void Transf( LPBYTE cString, WORD nLen, WORD nInic, WORD nSalto, BYTE nColor )
+  {
+  INDEX nInd;
+
+  for( nInd = nInic; nInd < nLen; nInd += nSalto )
+    {
+    cString[ nInd ]     = 32;
+    cString[ nInd + 1 ] = nColor;
+    }
+  }
+
+
+
+CLIPPER OtherBox()
+  {
+  WORD   nY1     = InitPos( 1, 0 );
+  WORD   nX1     = InitPos( 2, 0 );
+  WORD   nY2     = InitPos( 3, _gtMaxRow() );
+  WORD   nX2     = InitPos( 4, _gtMaxCol() );
+  LPBYTE cTitulo = ( ( _parinfo(  5 ) == 0 ) ? NULL : (LPBYTE)_parc( 5 ) );
+  WORD   nLenTit = _parclen( 5 );
+  LPBYTE cMarco  = (LPBYTE)_parc( 6 );
+  BOOL   lSombra = _parl( 7 );
+  LPBYTE cColor  = ( ( _parinfo(  8 ) == 0 ) ? NULL : (LPBYTE)_parc( 8 ) );
+  WORD   nSaltos = ( ( _parinfo(  9 ) == 0 ) ?   10 : _parni( 9 ) );
+  WORD   nDelay  = ( ( _parinfo( 10 ) == 0 ) ?   10 : _parni( 10 ) );
+  WORD   nInd1;
+  WORD   nCursor;
+  BYTE   nColor  = _parni( 11 );
+  HANDLE hSeg;
+  LPBYTE cPanta;
+  WORD   nTotal;
+  COLOR  sOld;
+  COLOR  sNew;
+
+  ComunOpenBox( cColor, & nCursor, & sOld, & sNew );
+  nDelay *= 10;
+  if ( ! _fastIsFastGT() )
+    {
+    nTotal = ( nY2 - nY1 + 1 ) * ( nX2 - nX1 + 1 ) * 2;
+    hSeg   = _vAlloc( nTotal, 0 );
+    cPanta = _vLock( hSeg );
+    _gtSave( nY1, nX1, nY2, nX2, cPanta );
+    for ( nInd1 = 0; nInd1 <= nSaltos - 1; nInd1++ )
+      {
+      _fastWait( nDelay );
+      Transf( cPanta, nTotal, nInd1 * 2, nSaltos * 2, nColor );
+      _gtRest( nY1, nX1, nY2, nX2, cPanta );
+      }
+    _vUnLock( hSeg );
+    _vFree( hSeg );
+    }
+  _gtBox( nY1, nX1, nY2, nX2, cMarco );
+  ComunCloseBox( lSombra, nY1, nX1, nY2, nX2, cTitulo, nLenTit, nCursor, & sOld );
+  }
+
+
+
+

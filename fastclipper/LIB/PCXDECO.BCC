@@ -1,0 +1,197 @@
+/* 
+------------------------------------------------------------------------
+FASTlib for Clipper, including all source code, examples and any other 
+file has been donated to Open Source community
+
+Manu Roibal. Bilbao, May 7 2011
+
+------------------------------------------------------------------------
+Please, contact me at	manuroibal@gmail.com
+Follow me at Twitter	@manuroibal on Twitter
+My Linkedin profile	www.linkedin.com/manuroibal
+
+Or visit my web site at	www.tonsofit.com
+------------------------------------------------------------------------
+*/
+
+
+#pragma inline
+
+#include "\libs\clipapi\clipapi.h"
+#include "\clip\bc\include\dos.h"
+#include "\libs\clipapi\linker.h"
+
+
+
+HIDE WORD   nBytesPerLine = 80;
+HIDE BYTE   nRepeat       = 0;
+HIDE WORD   nLineStart    = 0;
+HIDE WORD   nColumnCount  = 0;
+HIDE WORD   nPlane        = 1;
+HIDE WORD   nPosX         = 0;
+HIDE WORD   nPosY         = 0;
+HIDE WORD   nMaxX         = 0;
+HIDE WORD   nMaxY         = 0;
+HIDE WORD   nBanco        = 0;
+
+
+HIDE void WriteByte16( BYTE nByte )
+  {
+  vPointerGraph[ nLineStart + nColumnCount + nPosX + nPosY ] = nByte;
+  nColumnCount++;
+  if ( nColumnCount == nBytesPerLine )
+    {
+    nPlane <<= 1;
+    if ( nPlane > 8 )
+      nPlane = 1;
+    disable();
+    _fastOutPortB( 0x3C5, nPlane );
+    enable();
+    nColumnCount = 0;
+    if ( nPlane == 1 )
+      nLineStart += 80;
+    }
+  }
+
+
+CLIPPER DecoEGAVGA()
+  {
+  WORD   nDataLength = _parni( 1 );
+  LPBYTE cScratch    = (LPBYTE)_parc( 2 );
+  INDEX  nInd;
+  INDEX  nPixel;
+  BYTE   cByte;
+
+  if ( _parl( 6 ) )
+    {
+    _fastForce();
+    disable();
+    _fastOutPortB( 0x3C4, 2 );
+    _fastOutPortB( 0x3C5, 1 );
+    enable();
+    nRepeat      = 0;
+    nLineStart   = 0;
+    nColumnCount = 0;
+    nPlane       = 1;
+    }
+  nPosX         = _parni( 3 );
+  nPosY         = _parni( 4 );
+  nBytesPerLine = _parni( 5 );
+  for ( nInd = 0; nInd < nDataLength; nInd++ )
+    {
+    cByte = cScratch[ nInd ];
+    if ( nRepeat > 0 )
+      {
+      for ( nPixel = 0; nPixel < nRepeat; nPixel++ )
+        WriteByte16( cByte );
+      nRepeat = 0;
+      }
+    else
+      {
+      if ( ( cByte & 0xC0 ) != 0xC0 )
+        WriteByte16( cByte );
+      else
+        nRepeat = cByte ^ 0xC0;
+      }
+    }
+  }
+
+
+
+HIDE void WriteByte256( BYTE cByte, WORD nBytes, BOOL lVESA )
+  {
+  EXOREGS sRegs;
+  WORD    nX;
+
+  for ( ; nBytes; nBytes-- )
+    {
+    nX = nPosX + nColumnCount;
+    if ( ( nPosY < nMaxY ) && ( nX < nMaxX ) )
+      {
+      if ( lVESA )
+        {
+        disable();
+        asm {
+          mov bx, nPosY
+          mov ax, nMaxX
+          mul bx
+          add ax, nX
+          adc dx, 0
+          push ax
+          }
+        enable();
+        if ( nBanco != _DX )
+          {
+          sRegs.dx = nBanco = _DX;
+          sRegs.bx = 0;
+          sRegs.ax = 0x4F05;
+          ExoRMInterrupt( INT_VESA, & sRegs, & sRegs );
+          }
+        asm pop ax
+        vPointerGraph[ _AX ] = cByte;
+        }
+      else
+        {
+        vPointerGraph[ nLineStart + nPosX + nColumnCount ] = cByte;
+        }
+      }
+    nColumnCount++;
+    if ( nColumnCount == nBytesPerLine )
+      {
+      nColumnCount = 0;
+      nPosY++;
+      nLineStart = nPosY * nMaxX;
+      }
+    }
+  }
+
+
+
+CLIPPER Deco256()
+  {
+  WORD    nDataLength = _parni( 1 );
+  LPBYTE  cScratch    = (LPBYTE)_parc( 2 );
+  INDEX   nInd;
+  BYTE    cByte;
+  EXOREGS sRegs;
+  BOOL    lVESA       = _parl( 9 );
+
+  if ( _parl( 8 ) )
+    {
+    nPosX         = _parni( 3 );
+    nPosY         = _parni( 4 );
+    nBytesPerLine = _parni( 5 );
+    nMaxX         = _parni( 6 );
+    nMaxY         = _parni( 7 );
+    nRepeat       = 0;
+    nLineStart    = nPosY * nMaxX;
+    nColumnCount  = 0;
+    if ( lVESA )
+      {
+      nBanco   = 0;
+      sRegs.dx = nBanco;
+      sRegs.bx = 0;
+      sRegs.ax = 0x4F05;
+      ExoRMInterrupt( INT_VESA, & sRegs, & sRegs );
+      }
+    }
+  for ( nInd = 0; nInd < nDataLength; nInd++ )
+    {
+    cByte = cScratch[ nInd ];
+    if ( nRepeat > 0 )
+      {
+      WriteByte256( cByte, nRepeat, lVESA );
+      nRepeat = 0;
+      }
+    else
+      {
+      if ( ( cByte & 0xC0 ) != 0xC0 )
+        WriteByte256( cByte, 1, lVESA );
+      else
+        nRepeat = cByte ^ 0xC0;
+      }
+    }
+  }
+
+
+

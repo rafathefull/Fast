@@ -1,0 +1,78 @@
+/* 
+------------------------------------------------------------------------
+FASTlib for Clipper, including all source code, examples and any other 
+file has been donated to Open Source community
+
+Manu Roibal. Bilbao, May 7 2011
+
+------------------------------------------------------------------------
+Please, contact me at	manuroibal@gmail.com
+Follow me at Twitter	@manuroibal on Twitter
+My Linkedin profile	www.linkedin.com/manuroibal
+
+Or visit my web site at	www.tonsofit.com
+------------------------------------------------------------------------
+*/
+
+
+#pragma inline
+
+#include "\libs\clipapi\clipapi.h"
+#include "\clip\bc\include\dos.h"
+
+
+CLIPPER BigLetter()
+  {
+  BYTE   nInd, bLine[ 8 ];
+  LPBYTE bByte;
+  BYTE   bBit, bPos;
+
+  _fastForce();
+  _reta( 16 );
+  bByte = vGetPointerFont( FALSE ) + ( _parni( 1 ) << 4 );
+  for( nInd = 0; nInd < 16; nInd++ )
+    {
+    bPos = 128;
+    _bset( bLine, 32, 8 );
+    for( bBit = 0; bBit < 8; bBit++ )
+      {
+      if( (* bByte ) & bPos )
+        bLine[ bBit ] = 'Û';
+      bPos >>= 1;
+      }
+    bByte++;
+    _storclen( (LPSTR)bLine, 8, -1, nInd + 1 );
+    }
+  }
+
+
+CLIPPER SmallLette()
+  {
+  BYTE   nInd, bLine[ 8 ];
+  LPBYTE bByte;
+  BYTE   bBit, bPos;
+
+  _reta( 8 );
+  bByte = vGetPointerFont( FALSE ) + ( _parni( 1 ) << 4 );
+  _bset( bLine, 32, 8 );
+  for( nInd = 0; nInd < 16; nInd++ )
+    {
+    bPos = 128;
+    for( bBit = 0; bBit < 8; bBit++ )
+      {
+      if( (* bByte ) & bPos )
+        if ( nInd % 2 == 0 )
+          bLine[ bBit ] = 'ß';
+        else
+          bLine[ bBit ] = ( ( bLine[ bBit ] == 0xDF ) ? 'Û' : 'Ü' );
+      bPos >>= 1;
+      }
+    bByte++;
+    if ( nInd % 2 == 1 )
+      {
+      _storclen( (LPSTR)bLine, 8, -1, ( nInd / 2 ) + 1 );
+      _bset( bLine, 32, 8 );
+      }
+    }
+  }
+

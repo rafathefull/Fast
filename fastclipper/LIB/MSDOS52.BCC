@@ -1,0 +1,87 @@
+/* 
+------------------------------------------------------------------------
+FASTlib for Clipper, including all source code, examples and any other 
+file has been donated to Open Source community
+
+Manu Roibal. Bilbao, May 7 2011
+
+------------------------------------------------------------------------
+Please, contact me at	manuroibal@gmail.com
+Follow me at Twitter	@manuroibal on Twitter
+My Linkedin profile	www.linkedin.com/manuroibal
+
+Or visit my web site at	www.tonsofit.com
+------------------------------------------------------------------------
+*/
+
+
+#pragma inline
+
+#include "\libs\clipapi\clipapi.h"
+#include "\clip\bc\include\dos.h"
+
+
+
+CLIPPER nArgC()
+  {
+  _fastForce();
+  _retni( __argc );
+  }
+
+
+CLIPPER cArgV()
+  {
+  WORD ucWichOne = _parni( 1 );
+
+  _retc( (LPSTR)( ucWichOne <= __argc ? (LPSTR)( __argv[ ucWichOne ] ) : (LPSTR)"" ) );
+  }
+
+
+CLIPPER MemPSP()
+  {
+  LPWORD nSize;
+
+  nSize = MK_FP( _psp - 1, 0x03 );
+  _retnl( _fastMul( * nSize, 16 ) );
+  }
+
+
+CLIPPER SetVerify()
+  {
+  BOOL lVerify;
+  BOOL lAux;
+
+  _AH = 0x54;
+  geninterrupt( INT_DOS );
+  lVerify = _AL;
+  if ( _parinfo( 1 ) > 0 )
+    {
+    lAux = _parl( 1 );
+    _DL  = 0;
+    _AL = lAux;
+    _AH = 0x2E;
+    geninterrupt( INT_DOS );
+    }
+  _retl( lVerify );
+  }
+
+
+
+CLIPPER GetEnviron()
+  {
+  INDEX nInd;
+  WORD  nMax = 0;
+
+  for ( nMax = 0; ; nMax++ )
+    if ( ! environ[ nMax ] )
+      break;
+  _reta( nMax );
+  for ( nInd = 0; nInd < nMax; nInd++ )
+    {
+    if ( ! environ[ nInd ] )
+      break;
+    _storc( environ[ nInd ], -1, nInd + 1 );
+    }
+  }
+
+

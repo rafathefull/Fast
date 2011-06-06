@@ -1,0 +1,219 @@
+/* 
+------------------------------------------------------------------------
+FASTlib for Clipper, including all source code, examples and any other 
+file has been donated to Open Source community
+
+Manu Roibal. Bilbao, May 7 2011
+
+------------------------------------------------------------------------
+Please, contact me at	manuroibal@gmail.com
+Follow me at Twitter	@manuroibal on Twitter
+My Linkedin profile	www.linkedin.com/manuroibal
+
+Or visit my web site at	www.tonsofit.com
+------------------------------------------------------------------------
+*/
+
+
+#pragma inline
+
+#include "\libs\clipapi\clipapi.h"
+#include "\clip\bc\include\dos.h"
+#include "\libs\clipapi\linker.h"
+
+
+HIDE WORD   _faxInstall = 0x0;
+HIDE BYTE   _faxMagic   = 0xCB;
+HIDE LPBYTE _faxBuffer;
+
+
+HIDE WORD _faxInit( void )
+  {
+  EXOREGS sRegs;
+  LPBYTE  cBuffer;
+
+  _fastForce();
+  if ( ! _faxInstall )
+    {
+    _faxBuffer = _xalloclow( 256 );
+    sRegs.ax = _faxMagic << 8;
+    ExoRMInterrupt( INT_MISCEL, & sRegs, & sRegs );
+    if ( ( sRegs.ax & 0xFF ) == 0xFF )
+      {
+      sRegs.ax = ( _faxMagic << 8 ) + 0xE;
+      cBuffer  = ExoRealPtr( _faxBuffer );
+      sRegs.ds = FP_SEG( cBuffer );
+      sRegs.dx = FP_OFF( cBuffer );
+      ExoRMInterrupt( INT_MISCEL, & sRegs, & sRegs );
+      if ( sRegs.ax == 0x0 )
+        _faxInstall = 1;
+      }
+    }
+  return( _faxInstall );
+  }
+
+
+
+HIDE LPBYTE _faxDefPath( void )
+  {
+  return( _faxBuffer + 2 );
+  }
+
+
+
+HIDE LPBYTE _faxDefPhone( void )
+  {
+  return( _faxBuffer + 46 );
+  }
+
+
+
+HIDE LPBYTE _faxDefLogo( void )
+  {
+  return( _faxBuffer + 53 );
+  }
+
+
+
+HIDE LPBYTE _faxDefSender( void )
+  {
+  return( _faxBuffer + 60 );
+  }
+
+
+
+HIDE LPBYTE _faxCCITT( void )
+  {
+  return( _faxBuffer + 80 );
+  }
+
+
+
+HIDE void _faxSetAutoRec( BYTE nRings )
+  {
+  EXOREGS sRegs;
+
+  sRegs.ax = ( _faxMagic << 8 ) + 0xF;
+  sRegs.dx = ( nRings << 8 ) + 0x1;
+  ExoRMInterrupt( INT_MISCEL, & sRegs, & sRegs );
+  }
+
+
+
+HIDE BYTE _faxGetAutoRec( void )
+  {
+  EXOREGS sRegs;
+
+  sRegs.ax = ( _faxMagic << 8 ) + 0xF;
+  sRegs.dx = 0x0;
+  ExoRMInterrupt( INT_MISCEL, & sRegs, & sRegs );
+  return( sRegs.ax & 0xFF );
+  }
+
+
+
+HIDE void _faxSetMagic( BYTE nMagic )
+  {
+  _faxMagic = nMagic;
+  }
+
+
+
+HIDE BYTE _faxGetMagic( void )
+  {
+  return( _faxMagic );
+  }
+
+
+
+HIDE WORD _faxFindFirst( WORD nEvento, BYTE nDireccion, BYTE nQueue )
+  {
+  EXOREGS sRegs;
+
+  sRegs.ax = ( _faxMagic << 8 ) + 0x5;
+  sRegs.cx = nEvento;
+  sRegs.dx = ( nDireccion << 8 ) + nQueue;
+  ExoRMInterrupt( INT_MISCEL, & sRegs, & sRegs );
+  return( ( ( sRegs.ax == 0x0 ) ? sRegs.bx : 0xFFFF ) );
+  }
+
+
+
+
+HIDE WORD _faxFindNext( BYTE nQueue )
+  {
+  EXOREGS sRegs;
+
+  sRegs.ax = ( _faxMagic << 8 ) + 0x6;
+  sRegs.dx = nQueue;
+  ExoRMInterrupt( INT_MISCEL, & sRegs, & sRegs );
+  return( ( ( sRegs.ax == 0x0 ) ? sRegs.bx : 0xFFFF ) );
+  }
+
+
+
+
+
+CLIPPER faxInit()
+  {
+  _retl( _faxInit() );
+  }
+
+
+
+CLIPPER faxDefPath()
+  {
+  _retc( (LPSTR)_faxDefPath() );
+  }
+
+
+
+CLIPPER faxDefPhon()
+  {
+  _retc( (LPSTR)_faxDefPhone() );
+  }
+
+
+
+CLIPPER faxDefLogo()
+  {
+  _retc( (LPSTR)_faxDefLogo() );
+  }
+
+
+
+CLIPPER faxDefSend()
+  {
+  _retc( (LPSTR)_faxDefSender() );
+  }
+
+
+
+CLIPPER faxCCITT()
+  {
+  _retc( (LPSTR)_faxCCITT() );
+  }
+
+
+
+CLIPPER faxAutoRec()
+  {
+  BYTE nOld = _faxGetAutoRec();
+
+  if ( PCOUNT == 1 )
+    _faxSetAutoRec( (BYTE)_parni( 1 ) );
+  _retni( nOld );
+  }
+
+
+
+CLIPPER faxMagic()
+  {
+  BYTE nOld = _faxGetMagic();
+
+  if ( PCOUNT == 1 )
+    _faxSetMagic( (BYTE)_parni( 1 ) );
+  _retni( nOld );
+  }
+
+

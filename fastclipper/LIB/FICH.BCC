@@ -1,0 +1,151 @@
+/* 
+------------------------------------------------------------------------
+FASTlib for Clipper, including all source code, examples and any other 
+file has been donated to Open Source community
+
+Manu Roibal. Bilbao, May 7 2011
+
+------------------------------------------------------------------------
+Please, contact me at	manuroibal@gmail.com
+Follow me at Twitter	@manuroibal on Twitter
+My Linkedin profile	www.linkedin.com/manuroibal
+
+Or visit my web site at	www.tonsofit.com
+------------------------------------------------------------------------
+*/
+
+
+#pragma inline
+
+#include "\libs\clipapi\clipapi.h"
+#include "\clip\bc\include\dos.h"
+#include "\libs\clipapi\linker.h"
+
+
+extern LPBYTE strcat( char * lpTarget, const char * lpSource );
+
+
+
+HIDE WORD _fastFich( LPSTR cFichero, BYTE nServicio )
+  {
+  WORD nError;
+
+  _fastForce();
+  asm push ds
+  _DS = FP_SEG( cFichero );
+  _DX = FP_OFF( cFichero );
+  _AH = nServicio;
+  asm int 21h
+  asm pop ds
+  nError = _AX;
+  if ( ( _FLAGS & 1 ) == 0 )
+    nError = 0;
+  return( nError );
+  }
+
+
+CLIPPER fDel()
+  {
+  _tunlink( (LPBYTE)_parc( 1 ) );
+  _retni( _terror );
+  }
+
+
+CLIPPER DirDel()
+  {
+  _retni( _fastFich( _parc( 1 ), FAST_DIR_DEL ) );
+  }
+
+
+CLIPPER DirChange()
+  {
+  _retni( _fastFich( _parc( 1 ), FAST_DIR_CHANGE ) );
+  }
+
+
+
+CLIPPER DirCreate()
+  {
+  _retni( _fastFich( _parc( 1 ), FAST_DIR_CREATE ) );
+  }
+
+
+CLIPPER fDefUnit()
+  {
+  _DL = (BYTE)_parni( 1 );
+  _DH = 0x0;
+  _AH = 0x0E;
+  geninterrupt( INT_DOS );
+  }
+
+
+CLIPPER fMaxUnit()
+  {
+  _AH = 0x19;
+  geninterrupt( INT_DOS );
+  _DL = _AL;
+  _AH = 0x0E;
+  geninterrupt( INT_DOS );
+  _retni( (int)_AL );
+  }
+
+
+CLIPPER DosPath()
+  {
+  _retc( (LPSTR)_getenv( (LPBYTE)"PATH" ) );
+  }
+
+
+CLIPPER TrueName()
+  {
+  LPBYTE  chFile1 = _xalloclow( _parclen( 1 ) + 1 );
+  LPBYTE  clFile1;
+  LPBYTE  chFile2 = _xalloclow( 128 );
+  LPBYTE  clFile2 = ExoRealPtr( chFile2 );
+  EXOREGS sRegs;
+
+  _bcopy( chFile1, (LPBYTE)_parc( 1 ), _parclen( 1 ) + 1 );
+  clFile1 = ExoRealPtr( chFile1 );
+  sRegs.ds = FP_SEG( clFile1 );
+  sRegs.si = FP_OFF( clFile1 );
+  sRegs.es = FP_SEG( clFile2 );
+  sRegs.di = FP_OFF( clFile2 );
+  sRegs.ax = 0x6000;
+  ExoRMInterrupt( INT_DOS, & sRegs, & sRegs );
+  _retc( (LPSTR)chFile2 );
+  _xfreelow( chFile1 );
+  _xfreelow( chFile2 );
+  }
+
+
+CLIPPER fRandom()
+  {
+  BYTE nInd = 0;
+  BYTE cNombre[ 13 ];
+
+  _bset( cNombre, 0x0, 13 );
+  for ( nInd = 0; nInd < 8; nInd++ )
+    cNombre[ nInd ] = 65 + (BYTE)_fastRand( 25 );
+  strcat( (LPSTR)cNombre, ".TMP" );
+  _retc( (LPSTR)cNombre );
+  }
+
+
+CLIPPER FreeFiles()
+  {
+  WORD aHandles[ 256 ];
+  WORD nFiles = 0;
+  WORD nInd;
+  int  nHandle;
+
+  while( ( nHandle = _topen( "NUL", 0x2 ) ) > 0 )
+    {
+    aHandles[ nFiles ] = nHandle;
+    nFiles++;
+    }
+  for ( nInd = 0; nInd < nFiles; nInd++ )
+    _tclose( aHandles[ nInd ] );
+  _retni( nFiles );
+  }
+
+

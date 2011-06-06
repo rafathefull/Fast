@@ -1,0 +1,122 @@
+/* 
+------------------------------------------------------------------------
+FASTlib for Clipper, including all source code, examples and any other 
+file has been donated to Open Source community
+
+Manu Roibal. Bilbao, May 7 2011
+
+------------------------------------------------------------------------
+Please, contact me at	manuroibal@gmail.com
+Follow me at Twitter	@manuroibal on Twitter
+My Linkedin profile	www.linkedin.com/manuroibal
+
+Or visit my web site at	www.tonsofit.com
+------------------------------------------------------------------------
+*/
+
+
+#include "\libs\clipapi\clipapi.h"
+#include "\clip\bc\include\dos.h"
+
+
+
+#pragma option -a-
+struct  EXTENDEDFCB
+  {
+      char    extSignature    ;
+      char    extReserved1[5] ;
+      char    extAttribute    ;
+      char    extDriveID      ;
+      char    extFileName[8]  ;
+      char    extExtent[3]    ;
+      short   extCurBlockNo   ;
+      short   extRecSize      ;
+      char    extFileSize[4]  ;
+      short   extFileDate     ;
+      short   extFileTime     ;
+      char    extReserved2[8] ;
+      char    extCurRecNo     ;
+      char    extRandonRecNo[4];
+  };
+  #pragma option -a.
+
+
+
+
+#define CreateFCB( xfcb ) __emit__( 0x1E ); /* PUSH DS      */\
+            _AH = 0x2F;             /* Get Current DTA      */\
+            geninterrupt( 0x21 );   /* Call Upon DOS..      */\
+            __emit__( 0x06, 0x53 ); /* PUSH ES - PUSH BX    */\
+            _DS = FP_SEG( &xfcb );  /* Load Seg. of New DTA */\
+            _DX = FP_OFF( &xfcb );  /* Load Off. of New DTA */\
+            _AH = 0x1A;             /* Set DTA Function..   */\
+            geninterrupt( 0x21 );   /* Call Upon DOS        */\
+            _AH = 0x16;             /* Create File Function */\
+            geninterrupt( 0x21 );   /* Call Upon DOS        */\
+            __emit__( 0x5A, 0x1F ); /* POP DX  - POP  DS    */\
+            __emit__( 0x50 );       /* PUSH AX ( results )  */\
+            _AH = 0x1A;             /* Set ( Restore ) DTA  */\
+            geninterrupt( 0x21 );   /* Call Upon DOS        */\
+            __emit__( 0x58 );       /* Restore Results...   */\
+            __emit__( 0x1F );       /* Restore DS value...  */
+
+#define DeleteFCB( xfcb )  __emit__( 0x1E ); /* PUSH DS     */\
+            _AH = 0x2F;             /* Get Current DTA      */\
+            geninterrupt( 0x21 );   /* Call Upon DOS..      */\
+            __emit__( 0x06, 0x53 ); /* PUSH ES - PUSH BX    */\
+            _DS = FP_SEG( &xfcb );  /* Load Seg. of New DTA */\
+            _DX = FP_OFF( &xfcb );  /* Load Off. of New DTA */\
+            _AH = 0x1A;             /* Set DTA Function..   */\
+            geninterrupt( 0x21 );   /* Call Upon DOS        */\
+            _AH = 0x13;             /* Delete File Function */\
+            geninterrupt( 0x21 );   /* Call Upon DOS        */\
+            __emit__( 0x5A, 0x1F ); /* POP DX  - POP  DS    */\
+            __emit__( 0x50 );       /* PUSH AX ( results )  */\
+            _AH = 0x1A;             /* Set ( Restore ) DTA  */\
+            geninterrupt( 0x21 );   /* Call Upon DOS        */\
+            __emit__( 0x58 );       /* Restore Results...   */\
+            __emit__( 0x1F );       /* Restore DS value...  */
+
+
+
+
+HIDE int SetVolLabel( int driveNum, LPSTR Label )
+  {
+  INDEX  nInd;
+  LPSTR  p;
+  struct EXTENDEDFCB xfcb;
+
+  xfcb.extSignature = 0xFF;
+  xfcb.extAttribute = 0x08;
+  xfcb.extDriveID   = ( char )driveNum;
+  for( nInd = 0; nInd <= 11; nInd++ )
+    xfcb.extFileName[ nInd ] = '?';
+  DeleteFCB( xfcb );
+  if ( ! Label )
+    return(( int )_AL );
+  for( nInd = 0; nInd <= 11; nInd++ )
+    xfcb.extFileName[ nInd ] = ' ';
+  for( p = xfcb.extFileName; p < (LPSTR)&xfcb.extCurBlockNo; p++ )
+    {
+    if ( *Label == NULL )
+      break;
+    *p = *Label++;
+    }
+  CreateFCB( xfcb );
+  return(( int )_AL );
+  }
+
+
+
+CLIPPER SetLabel()
+  {
+  int nRet = -1;
+
+  _fastForce();
+  if ( PCOUNT == 2 )
+    nRet = SetVolLabel( _parni( 1 ), _parc( 2 ) );
+  else if ( PCOUNT == 1 )
+    nRet = SetVolLabel( _parni( 1 ), NULL );
+  _retni( nRet );
+  }
+

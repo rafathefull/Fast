@@ -1,0 +1,37 @@
+/* 
+------------------------------------------------------------------------
+FASTlib for Clipper, including all source code, examples and any other 
+file has been donated to Open Source community
+
+Manu Roibal. Bilbao, May 7 2011
+
+------------------------------------------------------------------------
+Please, contact me at	manuroibal@gmail.com
+Follow me at Twitter	@manuroibal on Twitter
+My Linkedin profile	www.linkedin.com/manuroibal
+
+Or visit my web site at	www.tonsofit.com
+------------------------------------------------------------------------
+*/
+
+
+#pragma inline
+
+#include "\libs\clipapi\clipapi.h"
+#include "\clip\bc\include\dos.h"
+
+
+CLIPPER IsLCD()
+  {
+  _AH = 0x15;
+  geninterrupt( INT_VIDEO );
+  _retl( ( _AX == 0x5140 ) );
+  }
+
+
+CLIPPER IsMono()
+  {
+  _fastForce();
+  _retl( (WORD)_fastInPortB( 0x3CC ) );
+  }
+

@@ -1,0 +1,146 @@
+/* 
+------------------------------------------------------------------------
+FASTlib for Clipper, including all source code, examples and any other 
+file has been donated to Open Source community
+
+Manu Roibal. Bilbao, May 7 2011
+
+------------------------------------------------------------------------
+Please, contact me at	manuroibal@gmail.com
+Follow me at Twitter	@manuroibal on Twitter
+My Linkedin profile	www.linkedin.com/manuroibal
+
+Or visit my web site at	www.tonsofit.com
+------------------------------------------------------------------------
+*/
+
+
+#pragma inline
+
+#include "\libs\clipapi\clipapi.h"
+
+
+CLIPPER AsciiAdd()
+  {
+  LPSTR cString = _parc( 1 );
+  WORD  nNumber = _parni( 2 );
+  WORD  nLen    = _parclen( 1 );
+  INDEX nInd;
+
+  _fastForce();
+  if ( PCOUNT == 2 )
+    {
+    for( nInd = 0; nInd < nLen; nInd++ )
+      cString[ nInd ] += nNumber;
+    _retc( cString );
+    }
+  }
+
+
+CLIPPER AsciiSum()
+  {
+  LPSTR cString = _parc( 1 );
+  WORD  nLen    = _parclen( 1 );
+  WORD  nCont   = 0;
+  INDEX nInd;
+
+  if ( PCOUNT == 1 )
+    {
+    for( nInd = 0; nInd < nLen; nInd++ )
+      nCont += cString[ nInd ];
+    _retni( nCont );
+    }
+  }
+
+
+CLIPPER StrSetCar()
+  {
+  LPSTR cString = _parc( 1 );
+  WORD  nLen    = _parclen( 1 );
+  WORD  nPos    = _parni( 2 ) - 1;
+
+  if ( PCOUNT == 3 )
+    {
+    if ( nPos < nLen )
+      cString[ nPos ] = _parni( 3 );
+    _retclen( cString, nLen );
+    }
+  }
+
+
+CLIPPER StrGetCar()
+  {
+  LPSTR cString = _parc( 1 );
+  WORD  nPos    = _parni( 2 ) - 1;
+
+  if ( PCOUNT == 2 )
+    if ( nPos < _parclen( 1 ) )
+      _retni( (WORD)cString[ nPos ] );
+  }
+
+
+
+CLIPPER CharEven()
+  {
+  LPSTR  cOrigen  = _parc( 1 );
+  WORD   nLen     = _parclen( 1 );
+  HANDLE hSeg     = _vAlloc( nLen, 0 );
+  LPSTR  cDestino = _vLock( hSeg );
+  INDEX  nInd     = 0;
+  WORD   nCont    = 0;
+
+  for( nInd = 1; nInd < nLen; nInd += 2, nCont++ )
+    cDestino[ nCont ] = cOrigen[ nInd ];
+  _retclen( cDestino, nCont );
+  _vUnLock( hSeg );
+  _vFree( hSeg );
+  }
+
+
+
+CLIPPER CharOdd()
+  {
+  LPSTR  cOrigen  = _parc( 1 );
+  WORD   nLen     = _parclen( 1 );
+  HANDLE hSeg     = _vAlloc( nLen, 0 );
+  LPSTR  cDestino = _vLock( hSeg );
+  INDEX  nInd     = 0;
+  WORD   nCont    = 0;
+
+  for( nInd = 0; nInd < nLen; nInd += 2, nCont++ )
+    cDestino[ nCont ] = cOrigen[ nInd ];
+  _retclen( cDestino, nCont );
+  _vUnLock( hSeg );
+  _vFree( hSeg );
+  }
+
+
+
+CLIPPER CharMix()
+  {
+  LPSTR  cOrigen1 = _parc( 1 );
+  WORD   nLen1    = _parclen( 1 );
+  LPSTR  cOrigen2 = _parc( 2 );
+  WORD   nLen2    = _parclen( 2 );
+  WORD   nLen3    = nLen1 + nLen2;
+  HANDLE hSeg     = _vAlloc( nLen3, 0 );
+  LPSTR  cDestino = _vLock( hSeg );
+  INDEX  nInd     = 0;
+  WORD   nCont1   = 0;
+  WORD   nCont2   = 0;
+
+  for( nInd = 0; nInd < nLen3; nInd += 2, nCont1++, nCont2++ )
+    {
+    if ( nCont1 >= nLen1 )
+      nCont1 = 0;
+    if ( nCont2 >= nLen2 )
+      nCont2 = 0;
+    cDestino[ nInd ]     = cOrigen1[ nCont1 ];
+    cDestino[ nInd + 1 ] = cOrigen2[ nCont2 ];
+    }
+  _retclen( cDestino, nInd );
+  _vUnLock( hSeg );
+  _vFree( hSeg );
+  }
+
+

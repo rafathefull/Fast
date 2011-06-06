@@ -1,0 +1,128 @@
+/* 
+------------------------------------------------------------------------
+FASTlib for Clipper, including all source code, examples and any other 
+file has been donated to Open Source community
+
+Manu Roibal. Bilbao, May 7 2011
+
+------------------------------------------------------------------------
+Please, contact me at	manuroibal@gmail.com
+Follow me at Twitter	@manuroibal on Twitter
+My Linkedin profile	www.linkedin.com/manuroibal
+
+Or visit my web site at	www.tonsofit.com
+------------------------------------------------------------------------
+*/
+
+
+#pragma inline
+
+#include "\libs\clipapi\clipapi.h"
+#include "\clip\bc\include\dos.h"
+#include "\libs\clipapi\linker.h"
+
+struct sIG
+  {
+  WORD  tipo;
+  DWORD tamFich;
+  WORD  resv1,resv2;
+  DWORD offImg;
+  };
+
+struct sID
+  {
+  DWORD tamEstr;
+  long  ancho, alto;
+  WORD  nPlanos, bPP;
+  DWORD tComp,tamImg;
+  long  xPPM,yPPM;
+  DWORD clrU,clrI;
+  };
+
+struct sRgb
+  {
+  BYTE  b,g,r,resv;
+  };
+
+struct sCab
+  {
+  struct sIG    iG;
+  struct sID    iD;
+  struct sRgb   Rgb[ 256 ];
+  };
+
+
+
+
+CLIPPER bmpShow256()
+  {
+  LPBYTE      cNombre = (LPBYTE)_parc( 1 );
+  BOOL        lPaleta = _parl( 2 );
+  WORD        nPosX   = _parni( 3 );
+  WORD        nPosY   = _parni( 4 );
+  struct sCab cabImg;
+  BYTE        *cLinea, cPaleta[ 768 ];
+  INDEX       nY;
+  WORD        nAncho, nAnchoReal;
+  int         hFich, nIndice;
+  LPBYTE      nPointer;
+
+  if ( ( hFich = _topen( (LPSTR)cNombre, 64 ) ) == -1 )
+    {
+    _retl( FALSE );
+    return;
+    }
+  _tread( hFich, (LPBYTE)& cabImg, sizeof( struct sCab ) );
+  if ( ( cabImg.iG.tipo != 19778 ) || //( cabImg.iD.bPP != 8 ) ||
+       ( ( cLinea = _xgrab( (WORD)cabImg.iD.ancho ) ) == NULL ) )
+    {
+    _retl( FALSE );
+    return;
+    }
+  if ( lPaleta )
+    {
+    for ( nIndice = 0; nIndice < 256; nIndice++ )
+      {
+      cPaleta[ nIndice * 3     ] = cabImg.Rgb[ nIndice ].r >> 2;
+      cPaleta[ nIndice * 3 + 1 ] = cabImg.Rgb[ nIndice ].g >> 2;
+      cPaleta[ nIndice * 3 + 2 ] = cabImg.Rgb[ nIndice ].b >> 2;
+      }
+    _fastSetPalette( (LPSTR)cPaleta, 256 );
+    }
+  nPointer   = vPointerGraph + ( (WORD)cabImg.iD.alto + nPosY ) * 320 + nPosX;
+  nAncho     = (WORD)cabImg.iD.ancho;
+  nAnchoReal = _fastMin( nAncho, 320 - nPosX );
+  for ( nY = (WORD)cabImg.iD.alto; nY > 0; nY-- )
+    {
+    nPointer -= 320;
+    _tread( hFich, (LPBYTE)cLinea, nAncho );
+    if ( nY + nPosY < 200 )
+      _bcopy( nPointer, cLinea, nAnchoReal );
+    }
+  _xfree( cLinea );
+  _tclose( hFich );
+  _retl( TRUE );
+  }
+
+
+CLIPPER bmpInfo()
+  {
+  struct sCab cabImg;
+  WORD        nColors = 1;
+  INDEX       nInd;
+  int         hFich;
+
+  if ( ( hFich = _topen( (LPSTR)_parc( 1 ), 64 ) ) == -1 )
+    return;
+  _tread( hFich, (LPBYTE)& cabImg, sizeof( struct sCab ) );
+  if ( cabImg.iG.tipo != 19778 )
+    return;
+  for ( nInd = 0; nInd < cabImg.iD.bPP; nInd++ )
+     nColors *= 2;
+  _reta( 4 );
+  _storni( (WORD)cabImg.iD.ancho, -1, 1 );
+  _storni( (WORD)cabImg.iD.alto,  -1, 2 );
+  _storni( cabImg.iD.nPlanos,     -1, 3 );
+  _storni( nColors,               -1, 4 );
+  _tclose( hFich );
+  }

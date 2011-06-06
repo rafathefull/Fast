@@ -1,0 +1,805 @@
+/* 
+------------------------------------------------------------------------
+FASTlib for Clipper, including all source code, examples and any other 
+file has been donated to Open Source community
+
+Manu Roibal. Bilbao, May 7 2011
+
+------------------------------------------------------------------------
+Please, contact me at	manuroibal@gmail.com
+Follow me at Twitter	@manuroibal on Twitter
+My Linkedin profile	www.linkedin.com/manuroibal
+
+Or visit my web site at	www.tonsofit.com
+------------------------------------------------------------------------
+*/
+
+
+#pragma inline
+
+#include "\libs\clipapi\clipapi.h"
+#include "\clip\bc\include\dos.h"
+
+
+#define VIRUS_DETECTED  94
+
+
+HIDE BOOL virShake( void )                   // shake
+  {
+  _AX = 0x4203;
+  geninterrupt( INT_DOS );
+  return( _AX == 0x1234 );
+  }
+
+HIDE BOOL virInvader( void )                 // invader
+  {
+  _AX = 0x4243;
+  geninterrupt( INT_DOS );
+  return( _AX == 0x5678 );
+  }
+
+HIDE BOOL virMG( void )                      // mg
+  {
+  _AX = 0x4B04;
+  geninterrupt( INT_DOS );
+  return( !( _FLAGS & 1 ) );
+  }
+
+HIDE BOOL vir699_ThirteenMinutes( void )     // 699 / thirteen minutes
+  {
+  _AX = 0x4B04;
+  geninterrupt( INT_DOS );
+  return( _AX == 0x044B );
+  }
+
+HIDE BOOL vir1063_Mono( void )               // 1063 / mono
+  {
+  _AX = 0x4B25;
+  geninterrupt( INT_DOS );
+  return( _DI == 0x1234 );
+  }
+
+HIDE BOOL virPlastique_AntiCad( void )       // plastique / anticad
+  {
+  _AX = 0x4B40;
+  geninterrupt( INT_DOS );
+  return( _AX == 0x5678 );
+  }
+
+HIDE BOOL virJabberwocky( void )             // jabberwocky
+  {
+  _AX = 0x4B4A;
+  geninterrupt( INT_DOS );
+  return( _AL == 0x57 );
+  }
+
+HIDE BOOL virHorse2( void )                  // horse-2
+  {
+  _AX = 0x4B4B;
+  geninterrupt( INT_DOS );
+  return( !( _FLAGS & 1 ) );
+  }
+
+HIDE BOOL virMurphy2( void )                 // murphy-2
+  {
+  _AX = 0x4B4D;
+  geninterrupt( INT_DOS );
+  return( !( _FLAGS & 1 ) );
+  }
+
+HIDE BOOL virPatricia_Smack( void )          // patricia / smack
+  {
+  _AX = 0x4B4D;
+  geninterrupt( INT_DOS );
+  return( !( _FLAGS & 1 ) );
+  }
+
+HIDE BOOL virPlastique2576_AntiCad2576( void ) // plastique-2576 / anticad-2576
+  {
+  _AX = 0x4B50;
+  geninterrupt( INT_DOS );
+  return( _AX == 0x1234 );
+  }
+
+HIDE BOOL virHorse( void )                   // horse
+  {
+  _AX = 0x4B53;
+  geninterrupt( INT_DOS );
+  return( !( _FLAGS & 1 ) );
+  }
+
+HIDE BOOL virSparse( void )                  // sparse
+  {
+  _AX = 0x4B55;
+  geninterrupt( INT_DOS );
+  return( _AX == 0x1231 );
+  }
+
+HIDE BOOL virMurphy1_or_Murphy4( void )      // murphy-1 / murphy-4
+  {
+  _AX = 0x4B59;
+  geninterrupt( INT_DOS );
+  return( !( _FLAGS & 1 ) );
+  }
+
+HIDE BOOL virShirley( void )                 // shirley
+  {
+  _AX = 0x4B87;
+  geninterrupt( INT_DOS );
+  return( _AX == 0x6663 );
+  }
+
+HIDE BOOL virZherkov1882( void )             // zherkov-1882
+  {
+  _AX = 0x4B95;
+  geninterrupt( INT_DOS );
+  return( _AX == 0x1973 );
+  }
+
+HIDE BOOL vir1876_Dashem( void )             // 1876 / dash-em
+  {
+  _AX = 0x4BA7;
+  geninterrupt( INT_DOS );
+  return( _AX == 0xB459 );
+  }
+
+HIDE BOOL virNomenklatura( void )            // nomenklatura
+  {
+  _AX = 0x4BAA;
+  geninterrupt( INT_DOS );
+  return( !( _FLAGS & 1 ) );
+  }
+
+HIDE BOOL vir948_Screenplus1( void )         // 948 / screenplus1
+  {
+  _AX = 0x4BAF;
+  geninterrupt( INT_DOS );
+  return( _AL == 0xFA );
+  }
+
+HIDE BOOL virMagnitogorsk( void )            // magnitogorsk
+  {
+  _AX = 0x4BAF;
+  geninterrupt( INT_DOS );
+  return( _AL == 0xAF );
+  }
+
+HIDE BOOL virLozinsky_Zherkov( void )        // lozinsky / zherkov
+  {
+  _AX = 0x4BDD;
+  geninterrupt( INT_DOS );
+  return( _AX == 0x1234 );
+  }
+
+HIDE BOOL virHitchcock( void )               // hitchcock
+  {
+  _AX = 0x4BFE;
+  geninterrupt( INT_DOS );
+  return( _AX == 0x1234 );
+  }
+
+HIDE BOOL virDarkAvenger1028( void )         // dark avenger-1028
+  {
+  _AX = 0x4BFE;
+  geninterrupt( INT_DOS );
+  return( _DI == 0x55BB );
+  }
+
+HIDE BOOL vir1193_Copyright( void )          // 1193 / copyright
+  {
+  _AX = 0x4BFE;
+  geninterrupt( INT_DOS );
+  return( _AX == 0xABCD );
+  }
+
+HIDE BOOL virUSSR707( void )                 // ussr-707
+  {
+  _AX = 0x4BFF;
+  geninterrupt( INT_DOS );
+  return( _BL == 0xFF );
+  }
+
+HIDE BOOL virJustice( void )                 // justice
+  {
+  _AX = 0x4BFF;
+  geninterrupt( INT_DOS );
+  return( _DI == 0x55AA );
+  }
+
+HIDE BOOL virEurope92( void )                // europe 92
+  {
+  _AX = 0x4BFF;
+  geninterrupt( INT_DOS );
+  return( !( _FLAGS & 1 ) );
+  }
+
+HIDE BOOL virCascade( void )                 // cascade
+  {
+  _AX = 0x4BFF;
+  _SI = 0x0000;
+  _DI = 0x0000;
+  geninterrupt( INT_DOS );
+  return( _DI == 0x55AA );
+  }
+
+HIDE BOOL vir516_Leapfrog( void )            // 516 / leapfrog
+  {
+  _AX = 0x5252;
+  geninterrupt( INT_DOS );
+  return( _BX == 0xFFEE );
+  }
+
+HIDE BOOL vir1067_Headcrash( void )          // 1067 / headcrash
+  {
+  _AX = 0x58CC;
+  geninterrupt( INT_DOS );
+  return( !( _FLAGS & 1 ) );
+  }
+
+HIDE BOOL virRape747( void )                 // rape-747
+  {
+  _AX = 0x6969;
+  geninterrupt( INT_DOS );
+  return( _AX == 0x0666 );
+  }
+
+HIDE BOOL virKlaeren_Hate( void )            // klaeren / hate
+  {
+  _AH = 0x76;
+  
+  return( _AL == 0x48 );
+  }
+
+HIDE BOOL virGrowingBlock( void )            // growing block
+  {
+  _AX = 0x7700;
+  geninterrupt( INT_DOS );
+  return( _AX == 0x0920 );
+  }
+
+HIDE BOOL virSqueaker( void )                // squeaker
+  {
+  _AH = 0x7F;
+  geninterrupt( INT_DOS );
+  return( _AH == 0x80 );
+  }
+
+HIDE BOOL virSVC( void )                     // SVC
+  {
+  _AH = 0x83;
+  geninterrupt( INT_DOS );
+  return( _DX == 0x1990 );
+  }
+
+HIDE BOOL virSVC_5( void )                   // SVC 5.0 or SVC 6.0
+  {
+  _AH = 0x84;
+  geninterrupt( INT_DOS );
+  return( _DX == 0x1990 );
+  }
+
+HIDE BOOL virVriest( void )                  // vriest
+  {
+  _AH = 0x89;
+  geninterrupt( INT_DOS );
+  return( _AX == 0x0123 );
+  }
+
+HIDE BOOL virCarioca( void )                 // carioca
+  {
+  _AH = 0x90;
+  geninterrupt( INT_DOS );
+  return( _AH == 0x01 );
+  }
+
+HIDE BOOL vir789_Filehider( void )           // 789 / filehider
+  {
+  _AX = 0xA1D5;
+  geninterrupt( INT_DOS );
+  return( _AX == 0x900D );
+  }
+
+HIDE BOOL virEddie2( void )                  // eddie-2
+  {
+  _AX = 0xA55A;
+  geninterrupt( INT_DOS );
+  return( _AX == 0x5AA5 );
+  }
+
+HIDE BOOL virBlinker( void )                 // blinker
+  {
+  _AX = 0xAA00;
+  geninterrupt( INT_DOS );
+  return( _AX == 0x00AA );
+  }
+
+HIDE BOOL virBacktime( void )                // backtime
+  {
+  _AX = 0xAA03;
+  geninterrupt( INT_DOS );
+  return( _AX == 0x03AA );
+  }
+
+HIDE BOOL vir600_or_VoronezhFamily( void )   // 600 or voronezh family
+  {
+  _AH = 0xAB;
+  geninterrupt( INT_DOS );
+  return( _AX == 0x5555 );
+  }
+
+HIDE BOOL virHeyYou( void )                  // hey you
+  {
+  _AX = 0xBBBB;
+  geninterrupt( INT_DOS );
+  return( _AX == 0x6969 );
+  }
+
+HIDE BOOL virDatalock( void )                // datalock
+  {
+  _AH = 0xBE;
+  geninterrupt( INT_DOS );
+  return( _AX == 0x1234 );
+  }
+
+HIDE BOOL virUSSR1049( void )                // ussr-1049
+  {
+  _AX    = 0xBE00;
+  _FLAGS = _FLAGS | 1;
+  geninterrupt( INT_DOS );
+  return( !( _FLAGS && 1 ) );
+  }
+
+HIDE BOOL virSlow_Zerotime( void )           // slow / zerotime
+  {
+  _AH = 0xC0;
+  geninterrupt( INT_DOS );
+  return( _AX == 0x0300 );
+  }
+
+HIDE BOOL virSolano( void )                  // solano
+  {
+  _AH = 0xC0;
+  geninterrupt( INT_DOS );
+  return( _AX == 0x1234 );
+  }
+
+HIDE BOOL vir905_Backfont( void )            // 905 / backfont
+  {
+  _AX = 0xC301;
+  _DX = 0xF1F1;
+  geninterrupt( INT_DOS );
+  return( _DX == 0x0E0E );
+  }
+
+HIDE BOOL virSverdlov( void )                // sverdlov
+  {
+  _AX = 0xC500;
+  geninterrupt( INT_DOS );
+  return( _AX == 0x6731 );
+  }
+
+HIDE BOOL virSocha( void )                   // socha
+  {
+  _AH = 0xC6;
+  geninterrupt( INT_DOS );
+  return( _AL == 0x55 );
+  }
+
+HIDE BOOL virYankee_or_MLTI( void )          // Yankee or mlti
+  {
+  _AX    = 0xC603;
+  _FLAGS = _FLAGS | 1;
+  geninterrupt( INT_DOS );
+  return( !( _FLAGS & 1 ) );
+  }
+
+HIDE BOOL virMH757( void )                   // mh-757
+  {
+  _AX = 0xC700;
+  geninterrupt( INT_DOS );
+  return( _AL == 0x07 );
+  }
+
+HIDE BOOL virMilous( void )                  // milous
+  {
+  _AH = 0xCB;
+  geninterrupt( INT_DOS );
+  return( _AL == 0x07 );
+  }
+
+HIDE BOOL virWitcode( void )                 // witcode
+  {
+  _AX = 0xCB02;
+  geninterrupt( INT_DOS );
+  return( _AX == 0x02CB );
+  }
+
+HIDE BOOL virWestwood( void )                // westwood
+  {
+  _AH = 0xCC;
+  geninterrupt( INT_DOS );
+  return( _AX == 0x0700 );
+  }
+
+HIDE BOOL virFellowship( void )              // fellowship
+  {
+  _AX = 0xD000;
+  geninterrupt( INT_DOS );
+  return( _BX == 0x1234 );
+  }
+
+HIDE BOOL virDiamondA( void )                // diamond-a
+  {
+  _AX = 0xD5AA;
+  geninterrupt( INT_DOS );
+  return( _AX == 0x2A55 );
+  }
+
+HIDE BOOL virDiamondB( void )                // diamond-b
+  {
+  _AX = 0xD5AA;
+  geninterrupt( INT_DOS );
+  return( _AX == 0x2A03 );
+  }
+
+HIDE BOOL virDir( void )                     // dir
+  {
+  _AX = 0xD5AA;
+  asm push bp
+  _BP = 0xDEAA;
+  geninterrupt( INT_DOS );
+  asm pop bp
+  return( _SI == 0x4321 );
+  }
+
+HIDE BOOL virGotcha( void )                  // gotcha
+  {
+  _AX = 0xDADA;
+  geninterrupt( INT_DOS );
+  return( _AH == 0xA5 );
+  }
+
+HIDE BOOL virPlovdiv( void )                 // plovdiv 1.3
+  {
+  _AX = 0xDAFE;
+  geninterrupt( INT_DOS );
+  return( _AX == 0x1234 );
+  }
+
+HIDE BOOL virDurban( void )                  // durban
+  {
+  _AH = 0xDE;
+  geninterrupt( INT_DOS );
+  return( _AH == 0xDF );
+  }
+
+HIDE BOOL virBrothers( void )                // brothers
+  {
+  _AX = 0xDEDE;
+  geninterrupt( INT_DOS );
+  return( _AH == 0x41 );
+  }
+
+HIDE BOOL virJerusalem( void )               // jerusalem family
+  {
+  _AH = 0xE0;
+  geninterrupt( INT_DOS );
+  return( _AX == 0x0300 );
+  }
+
+HIDE BOOL virArmagedon( void )               // armagedon
+  {
+  _AH = 0xE0;
+  geninterrupt( INT_DOS );
+  return( _AX == 0xDADA );
+  }
+
+HIDE BOOL vir8tunes( void )                  // 8-tunes
+  {
+  _AX = 0xE00F;
+  geninterrupt( INT_DOS );
+  return( _AX == 0x4C31 );
+  }
+
+HIDE BOOL virMendoza( void )                 // mendoza
+  {
+  _AH = 0xE1;
+  geninterrupt( INT_DOS );
+  return( _AX == 0x0300 );
+  }
+
+HIDE BOOL virFuManchu( void )                // fu manchu
+  {
+  _AH = 0xE1;
+  geninterrupt( INT_DOS );
+  return( _AX == 0x0400 );
+  }
+
+HIDE BOOL virAnarkia( void )                 // anarkia
+  {
+  _AH = 0xE4;
+  geninterrupt( INT_DOS );
+  return( _AH ==  0x04 );
+  }
+
+HIDE BOOL virSpyer_Kiev( void )              // spyer / kiev
+  {
+  _AH = 0xE7;
+  geninterrupt( INT_DOS );
+  return( _AH == 0x78 );
+  }
+
+HIDE BOOL virTerror( void )                  // terror
+  {
+  _AX = 0xEC59;
+  asm push bp
+  geninterrupt( INT_DOS );
+  _AX = _BP;
+  asm pop bp
+  return( _AX == 0xEC59 );
+  }
+
+HIDE BOOL virJerusalemG( void )              // jerusalem-g
+  {
+  _AH = 0xEE;
+  geninterrupt( INT_DOS );
+  return( _AX == 0x0300 );
+  }
+
+HIDE BOOL virPregnant( void )                // pregnant
+  {
+  _AH = 0xEE;
+  geninterrupt( INT_DOS );
+  return( _AL == 0x05 );
+  }
+
+HIDE BOOL virFrereJacques( void )            // frere jacques
+  {
+  _AH = 0xF0;
+  geninterrupt( INT_DOS );
+  return( _AX == 0x0300 );
+  }
+
+HIDE BOOL virTremor( void )                 // tremor
+  {
+//  _AX = 0xF1E9;
+//  geninterrupt( INT_DOS );
+//  return( _AX == 0xF100 );
+  return( FALSE );
+  }
+
+HIDE BOOL virPcVrsDs( void )                 // pcvrsds
+  {
+  _AX = 0xF2AA;
+  geninterrupt( INT_DOS );
+  return( _AH == 0xAA );
+  }
+
+HIDE BOOL virCarfield( void )                // carfield
+  {
+  _AH = 0xF3;
+  geninterrupt( INT_DOS );
+  return( _AX == 0x0400 );
+  }
+
+HIDE BOOL virGP1( void )                     // gp1
+  {
+  _AH = 0xF7;
+  geninterrupt( INT_DOS );
+  return( _AX == 0x0300 );
+  }
+
+HIDE BOOL virCinderella( void )              // cinderella
+  {
+  _AH = 0xFB;
+  geninterrupt( INT_DOS );
+  return( _AH == 0x00 );
+  }
+
+HIDE BOOL virdBase( void )                   // dbase
+  {
+  _AX = 0xFB0A;
+  geninterrupt( INT_DOS );
+  return( _AX == 0x0AFB );
+  }
+
+HIDE BOOL virTroi( void )                    // troi
+  {
+  _AH = 0xFC;
+  geninterrupt( INT_DOS );
+  return( _AL == 0xA5 );
+  }
+
+HIDE BOOL virBorder( void )                  // border
+  {
+  _AH = 0xFD;
+  geninterrupt( INT_DOS );
+  return( _AH == 0x13 );
+  }
+
+HIDE BOOL vir483( void )                     // 483
+  {
+  _AH = 0xFE;
+  geninterrupt( INT_DOS );
+  return( _AH == 0x00 );
+  }
+
+HIDE BOOL virFlip( void )                    // flip
+  {
+  _AX = 0xFE01;
+  geninterrupt( INT_DOS );
+  return( _AX == 0x01FE );
+  }
+
+HIDE BOOL vir2468_Tequila( void )            // 2468 / tequila
+  {
+  _AX = 0xFE02;
+  geninterrupt( INT_DOS );
+  return( _AX == 0x01FD );
+  }
+
+HIDE BOOL virBlackMonday( void )             // black monday
+  {
+  _AX = 0xFEDC;
+  geninterrupt( INT_DOS );
+  return( _AL == 0xDC );
+  }
+
+HIDE BOOL virSunday( void )                  // sunday
+  {
+  _AH = 0xFF;
+  geninterrupt( INT_DOS );
+  return( _AX == 0x0400 );
+  }
+
+HIDE BOOL virTumen5_or_Hero( void )          // tumen 0.5 / hero
+  {
+  _AH = 0xFF;
+  geninterrupt( INT_DOS );
+  return( _AH == 0x00 );
+  }
+
+HIDE BOOL virTwins( void )                   // twins
+  {
+  _AX = 0xFF10;
+  geninterrupt( INT_DOS );
+  return( _AL == 0x07 );
+  }
+
+HIDE BOOL vir0815_ManyFingers( void )        // 08/15 / many fingers
+  {
+  _AX = 0xFFFE;
+  geninterrupt( INT_DOS );
+  return( _AX == 0x0815 );
+  }
+
+HIDE BOOL virOntario( void )                 // ontario
+  {
+  _AX = 0xFFFF;
+  geninterrupt( INT_DOS );
+  return( _AX == 0x0000 );
+  }
+
+HIDE BOOL virYear1992_B1M92( void )          // year 1992 / b1m92
+  {
+  _AX = 0xFFFF;
+  geninterrupt( INT_DOS );
+  return( _AX == 0x1992 );
+  }
+
+HIDE BOOL virRevenge( void )                 // revenge
+  {
+  _AX = 0xFFFF;
+  _CX = 0x0000;
+  geninterrupt( INT_DOS );
+  return( _CX == 0x0006 );
+  }
+
+
+
+CLIPPER VirCheck()
+  {
+  WORD  aVirus[ VIRUS_DETECTED ];
+  INDEX nInd;
+
+  _fastForce();
+  aVirus[  0 ] = virShake();
+  aVirus[  1 ] = virInvader();
+  aVirus[  2 ] = virMG();
+  aVirus[  3 ] = vir699_ThirteenMinutes();
+  aVirus[  4 ] = vir1063_Mono();
+  aVirus[  5 ] = virPlastique_AntiCad();
+  aVirus[  6 ] = virJabberwocky();
+  aVirus[  7 ] = virHorse2();
+  aVirus[  8 ] = virMurphy2();
+  aVirus[  9 ] = virPatricia_Smack();
+  aVirus[ 10 ] = virPlastique2576_AntiCad2576();
+  aVirus[ 11 ] = virHorse();
+  aVirus[ 12 ] = virSparse();
+  aVirus[ 13 ] = virMurphy1_or_Murphy4();
+  aVirus[ 14 ] = virShirley();
+  aVirus[ 15 ] = virZherkov1882();
+  aVirus[ 16 ] = vir1876_Dashem();
+  aVirus[ 17 ] = virNomenklatura();
+  aVirus[ 18 ] = vir948_Screenplus1();
+  aVirus[ 19 ] = virMagnitogorsk();
+  aVirus[ 20 ] = virLozinsky_Zherkov();
+  aVirus[ 21 ] = virHitchcock();
+  aVirus[ 22 ] = virDarkAvenger1028();
+  aVirus[ 23 ] = vir1193_Copyright();
+  aVirus[ 24 ] = virUSSR707();
+  aVirus[ 25 ] = virJustice();
+  aVirus[ 26 ] = virEurope92();
+  aVirus[ 27 ] = virCascade();
+  aVirus[ 28 ] = vir516_Leapfrog();
+  aVirus[ 29 ] = vir1067_Headcrash();
+  aVirus[ 30 ] = virRape747();
+  aVirus[ 31 ] = virKlaeren_Hate();
+  aVirus[ 32 ] = virGrowingBlock();
+  aVirus[ 33 ] = virSqueaker();
+  aVirus[ 34 ] = virSVC();
+  aVirus[ 35 ] = virSVC_5();
+  aVirus[ 36 ] = virVriest();
+  aVirus[ 37 ] = virCarioca();
+  aVirus[ 38 ] = vir789_Filehider();
+  aVirus[ 39 ] = virEddie2();
+  aVirus[ 40 ] = virBlinker();
+  aVirus[ 41 ] = virBacktime();
+  aVirus[ 42 ] = vir600_or_VoronezhFamily();
+  aVirus[ 43 ] = virHeyYou();
+  aVirus[ 44 ] = virDatalock();
+  aVirus[ 45 ] = virUSSR1049();
+  aVirus[ 46 ] = virSlow_Zerotime();
+  aVirus[ 47 ] = virSolano();
+  aVirus[ 48 ] = vir905_Backfont();
+  aVirus[ 49 ] = virSverdlov();
+  aVirus[ 50 ] = virSocha();
+  aVirus[ 51 ] = virYankee_or_MLTI();
+  aVirus[ 52 ] = virMH757();
+  aVirus[ 53 ] = virMilous();
+  aVirus[ 54 ] = virWitcode();
+  aVirus[ 55 ] = virWestwood();
+  aVirus[ 56 ] = virFellowship();
+  aVirus[ 57 ] = virDiamondA();
+  aVirus[ 58 ] = virDiamondB();
+  aVirus[ 59 ] = virDir();
+  aVirus[ 60 ] = virGotcha();
+  aVirus[ 61 ] = virPlovdiv();
+  aVirus[ 62 ] = virDurban();
+  aVirus[ 63 ] = virBrothers();
+  aVirus[ 64 ] = virJerusalem();
+  aVirus[ 65 ] = virArmagedon();
+  aVirus[ 66 ] = vir8tunes();
+  aVirus[ 67 ] = virMendoza();
+  aVirus[ 68 ] = virFuManchu();
+  aVirus[ 69 ] = virAnarkia();
+  aVirus[ 70 ] = virSpyer_Kiev();
+  aVirus[ 71 ] = virTerror();
+  aVirus[ 72 ] = virJerusalemG();
+  aVirus[ 73 ] = virPregnant();
+  aVirus[ 74 ] = virFrereJacques();
+  aVirus[ 75 ] = virTremor();
+  aVirus[ 76 ] = virPcVrsDs();
+  aVirus[ 77 ] = virCarfield();
+  aVirus[ 78 ] = virGP1();
+  aVirus[ 79 ] = virCinderella();
+  aVirus[ 80 ] = virdBase();
+  aVirus[ 81 ] = virTroi();
+  aVirus[ 82 ] = virBorder();
+  aVirus[ 83 ] = vir483();
+  aVirus[ 84 ] = virFlip();
+  aVirus[ 85 ] = vir2468_Tequila();
+  aVirus[ 86 ] = virBlackMonday();
+  aVirus[ 87 ] = virSunday();
+  aVirus[ 88 ] = virTumen5_or_Hero();
+  aVirus[ 89 ] = virTwins();
+  aVirus[ 90 ] = vir0815_ManyFingers();
+  aVirus[ 91 ] = virOntario();
+  aVirus[ 92 ] = virYear1992_B1M92();
+  aVirus[ 93 ] = virRevenge();
+  _reta( VIRUS_DETECTED );
+  for ( nInd = 0; nInd < VIRUS_DETECTED; nInd++ )
+    _storl( aVirus[ nInd ], -1, nInd + 1 );
+  }
+
+

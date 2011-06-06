@@ -1,0 +1,210 @@
+
+.prg.obj:
+  Clipper $* /N /W /M /L /ES2 /o$@
+
+.bcc.obj:
+  bcc -2 -ml -Z -G -d -O -X -c -w -zFAST_SEG $*.bcc
+
+.c.obj:
+  mscl /AL /FPa /G2 /Gs /c /Zl /Ox $*.c
+
+.asm.obj:
+  masm $*.asm /n /Mx;
+
+.tas.obj:
+  tasm $*.tas /mx /n /q /o /p
+
+
+demo.obj:     demo.prg
+
+aCar2Arr.obj: aCar2Arr.prg
+arj.obj:      arj.prg
+arrays.obj:   arrays.prg
+arra16.obj:   arra16.prg
+ascii.obj:    ascii.prg
+asciipro.obj: asciipro.prg
+backup.obj:   backup.prg
+barras.obj:   barras.prg
+barras2.obj:  barras2.prg
+barras3.obj:  barras3.prg
+big.obj:      big.prg
+bigclk.obj:   bigclk.prg
+binario.obj:  binario.prg
+box.obj:      box.prg
+boxope.obj:   boxope.prg
+calendar.obj: calendar.prg
+calculad.obj: calculad.prg
+caos.obj:     caos.prg
+choose.obj:   choose.prg
+colores.obj:  colores.prg
+crono.obj:    crono.prg
+datos.obj:    datos.prg
+dbfmemo.obj:  dbfmemo.prg
+debug.obj:    debug.prg
+debugger.obj: debugger.prg
+dial.obj:     dial.prg
+editor.obj:   editor.prg
+fascinat.obj: fascinat.prg
+fechas.obj:   fechas.prg
+fichero.obj:  fichero.prg
+files.obj:    files.prg
+finfo.obj:    finfo.prg
+fondogra.obj: fondogra.prg
+font.obj:     font.prg
+fsearch.obj:  fsearch.prg
+gauge.obj:    gauge.prg
+hoja.obj:     hoja.prg
+horas.obj:    horas.prg
+huffint.obj:  huffint.prg
+language.obj: language.prg
+imprime.obj:  imprime.prg
+ini.obj:      ini.prg
+lengast.obj:  lengast.prg
+lengbas.obj:  lengbas.prg
+lengcat.obj:  lengcat.prg
+lengeng.obj:  lengeng.prg
+lengfre.obj:  lengfre.prg
+lengfin.obj:  lengfin.prg
+lenggal.obj:  lenggal.prg
+lengger.obj:  lengger.prg
+lengita.obj:  lengita.prg
+lenglus.obj:  lenglus.prg
+lengspa.obj:  lengspa.prg
+lengswe.obj:  lengswe.prg
+lineas.obj:   lineas.prg
+logarit.obj:  logarit.prg
+lotus.obj:    lotus.prg
+manager.obj:  manager.prg
+menus.obj:    menus.prg
+miscelan.obj: miscelan.prg
+operador.obj: operador.prg
+pantalla.obj: pantalla.prg
+pcx1.obj:     pcx1.prg
+pcx2.obj:     pcx2.prg
+pilas.obj:    pilas.prg
+pirate.obj:   pirate.prg
+puzzle.obj:   puzzle.prg
+radio.obj:    radio.prg
+rinkey.obj:   rinkey.prg
+savearra.obj: savearra.prg
+savers.obj:   savers.prg
+scroll.obj:   scroll.prg
+segur.obj:    segur.prg
+serpient.obj: serpient.prg
+sets.obj:     sets.prg
+sistema.obj:  sistema.prg
+string.obj:   string.prg
+tarta.obj:    tarta.prg
+teclado.obj:  teclado.prg
+tetris.obj:   tetris.prg
+token.obj:    token.prg
+tree.obj:     tree.prg
+zip.obj:      zip.prg
+
+
+acres.obj:    acres.c
+fastmath.obj: fastmath.c
+huffman.obj:  huffman.c
+inch.obj:     inch.c
+kilos.obj:    kilos.c
+litros.obj:   litros.c
+numerico.obj: numerico.c
+trigon.obj:   trigon.c
+yard.obj:     yard.c
+
+
+
+adapter.obj:  adapter.bcc
+alea.obj:     alea.bcc
+a2e.obj:      a2e.bcc
+bigc.obj:     bigc.bcc
+bios.obj:     bios.bcc
+bmp.obj:      bmp.bcc
+byte.obj:     byte.bcc
+cd.obj:       cd.bcc
+char.obj:     char.bcc
+clock.obj:    clock.bcc
+cmos.obj:     cmos.bcc
+comc.obj:     comc.bcc
+datetime.obj: datetime.bcc
+dbfc.obj:     dbfc.bcc
+degrade.obj:  degrade.bcc
+desq.obj:     desq.bcc
+disco.obj:    disco.bcc
+diskser.obj:  diskser.bcc
+dpmi.obj:     dpmi.bcc
+equipmen.obj: equipmen.bcc
+empty.obj:    empty.bcc
+encript.obj:  encript.bcc
+event.obj:    event.bcc
+fastlib.obj:  fastlib.bcc
+fax.obj:      fax.bcc
+fich.obj:     fich.bcc
+fichmov.obj:  fichmov.bcc
+fichoper.obj: fichoper.bcc
+filepan.obj:  filepan.bcc
+fli.obj:      fli.bcc
+fm.obj:       fm.bcc
+fossil.obj:   fossil.bcc
+fuente.obj:   fuente.bcc
+game.obj:     game.bcc
+getbaud.obj:  getbaud.bcc
+gifc.obj:     gifc.bcc
+graphic.obj:  graphic.bcc
+gray.obj:     gray.bcc
+idle.obj:     idle.bcc
+keyboard.obj: keyboard.bcc
+label.obj:    label.bcc
+lan.obj:      lan.bcc
+like.obj:     like.bcc
+logicos.obj:  logicos.bcc
+lowdisk.obj:  lowdisk.bcc
+msdos52.obj:  msdos52.bcc
+novell.obj:   novell.bcc
+pcxdeco.obj:  pcxdeco.bcc
+pcxgif.obj:   pcxgif.bcc
+pointers.obj: pointers.bcc
+poke.obj:     poke.bcc
+ports.obj:    ports.bcc
+printer.obj:  printer.bcc
+rata.obj:     rata.bcc
+realstar.obj: realstar.bcc
+reboot.obj:   reboot.bcc
+roman.obj:    roman.bcc
+savescr.obj:  savescr.bcc
+sbc.obj:      sbc.bcc
+screen.obj:   screen.bcc
+smartdrv.obj: smartdrv.bcc
+soundc.obj:   soundc.bcc
+system.obj:   system.bcc
+tarjetas.obj: tarjetas.bcc
+uart.obj:     uart.bcc
+vector.obj:   vector.bcc
+vesac.obj:    vesac.bcc
+vgaprimi.obj: vgaprimi.bcc
+vidmode.obj:  vidmode.bcc
+virus.obj:    virus.bcc
+wall.obj:     wall.bcc
+windows.obj:  windows.bcc
+win3.obj:     win3.bcc
+
+
+cputype.obj:  cputype.tas
+crc.obj:      crc.tas
+crc16.obj:    crc16.tas
+
+
+disklow.obj:  disklow.asm
+fliaux.obj:   fliaux.asm
+random.obj:   random.asm
+
+
+
+demo.exe :
+ del fast52.lib
+ lib fast52 @fast52.lin
+ d:\clip\blinker3\bin\blinker fi demo lib fast52, \libs\mem\apibli bli exe ext sea blxclp52
+// exospace file demo library fast exospace package int10,mouse
+// blinker fi demo lib fast, \libs\mem\apibli out demorm
+// rtlink fi demo lib fast, \libs\mem\apistd out demostd
+ 

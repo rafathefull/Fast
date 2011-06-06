@@ -1,0 +1,126 @@
+/* 
+------------------------------------------------------------------------
+FASTlib for Clipper, including all source code, examples and any other 
+file has been donated to Open Source community
+
+Manu Roibal. Bilbao, May 7 2011
+
+------------------------------------------------------------------------
+Please, contact me at	manuroibal@gmail.com
+Follow me at Twitter	@manuroibal on Twitter
+My Linkedin profile	www.linkedin.com/manuroibal
+
+Or visit my web site at	www.tonsofit.com
+------------------------------------------------------------------------
+*/
+
+
+#pragma inline
+
+#include "\libs\clipapi\clipapi.h"
+#include "\clip\bc\include\dos.h"
+
+
+HIDE void _fastDegrade( LPBYTE cPaleta, WORD nLen )
+  {
+  BYTE   cCopia[ 768 ];
+  LPBYTE cPuntero;
+  WORD   nMax   = nLen / 3;
+  INDEX  nInd;
+  BOOL   nTimes = 0;
+
+  cPuntero = cCopia;
+  _bcopy( cPuntero, cPaleta, nLen );
+  while ( nTimes < 64 )
+    {
+    nTimes++;
+    _fastRetrace();
+    asm push ds
+    asm push si
+    asm lds  si, dword ptr cPuntero
+    for( nInd = 0; nInd < nMax; nInd++ )
+      {
+      asm mov dx, 0x3c8
+      asm mov ax, nInd
+      asm out dx, al
+      asm inc dx
+      asm mov cx, 3
+eti_ini:
+      asm mov al, byte ptr ds:[ si ]
+      asm out dx, al
+      asm cmp al, 0
+      asm jng eti_fin
+      asm dec al
+      asm mov byte ptr ds:[ si ], al
+eti_fin:
+      asm inc si
+      asm loop eti_ini
+      }
+    asm pop si
+    asm pop ds
+    }
+  }
+
+
+HIDE void _fastUpgrade( LPBYTE cPaleta, WORD nLen )
+  {
+  BYTE   cCopia[ 768 ];
+  LPBYTE cPuntero1;
+  LPBYTE cPuntero2;
+  WORD   nMax    = nLen / 3;
+  INDEX  nInd;
+  BOOL   nTimes  = 0;
+
+  cPuntero1 = cCopia;
+  cPuntero2 = cPaleta;
+  _bset( cPuntero1, 0x0, 768 );
+  while ( nTimes < 64 )
+    {
+    nTimes++;
+    _fastRetrace();
+    asm push es
+    asm push di
+    asm push ds
+    asm push si
+    asm lds  si, dword ptr cPuntero1
+    asm les  di, dword ptr cPuntero2
+    for( nInd = 0; nInd < nMax; nInd++ )
+      {
+      asm mov dx, 0x3c8
+      asm mov ax, nInd
+      asm out dx, al
+      asm inc dx
+      asm mov cx, 3
+eti_ini:
+      asm mov al, byte ptr ds:[ si ]
+      asm out dx, al
+      asm mov ah, byte ptr es:[ di ]
+      asm cmp al, ah
+      asm jge eti_fin
+      asm inc al
+      asm mov byte ptr ds:[ si ], al
+eti_fin:
+      asm inc si
+      asm inc di
+      asm loop eti_ini
+      }
+    asm pop si
+    asm pop ds
+    asm pop di
+    asm pop es
+    }
+  }
+
+
+CLIPPER Degrade()
+  {
+  _fastForce();
+  _fastDegrade( (LPBYTE)_parc( 1 ), _parclen( 1 ) );
+  }
+
+
+CLIPPER Upgrade()
+  {
+  _fastUpgrade( (LPBYTE)_parc( 1 ), _parclen( 1 ) );
+  }
+

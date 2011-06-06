@@ -1,0 +1,148 @@
+/* 
+------------------------------------------------------------------------
+FASTlib for Clipper, including all source code, examples and any other 
+file has been donated to Open Source community
+
+Manu Roibal. Bilbao, May 7 2011
+
+------------------------------------------------------------------------
+Please, contact me at	manuroibal@gmail.com
+Follow me at Twitter	@manuroibal on Twitter
+My Linkedin profile	www.linkedin.com/manuroibal
+
+Or visit my web site at	www.tonsofit.com
+------------------------------------------------------------------------
+*/
+
+
+#pragma inline
+
+#include "\libs\clipapi\clipapi.h"
+#include "\clip\bc\include\dos.h"
+
+
+HIDE void KeybUpdate( BYTE );
+HIDE void Speed( WORD nSpeed );
+
+HIDE LPBYTE cKeyStatus = MK_FP( 0x40, 0x17 );
+
+
+
+CLIPPER FastKey()
+  {
+  _fastForce();
+  Speed( 0x0 );
+  }
+
+
+CLIPPER SlowKey()
+  {
+  Speed( 0x031F );
+  }
+
+
+CLIPPER NormKey()
+  {
+  Speed( 0x010D );
+  }
+
+
+CLIPPER KeyScan()
+  {
+  _AX = 0x0;
+  geninterrupt( INT_KEYBOARD );
+  _retni( _AX );
+  }
+
+
+CLIPPER IsAlt()
+  {
+  _retl( *cKeyStatus & 8 );
+  }
+
+
+CLIPPER IsCtrl()
+  {
+  _retl( *cKeyStatus & 4 );
+  }
+
+
+CLIPPER IsLShift()
+  {
+  _retl( *cKeyStatus & 2 );
+  }
+
+
+CLIPPER IsRShift()
+  {
+  _retl( *cKeyStatus & 1 );
+  }
+
+
+CLIPPER IsScroll()
+  {
+  WORD nRet = *cKeyStatus & 16;
+
+  KeybUpdate( 16 );
+  _retl( nRet );
+  }
+
+
+CLIPPER IsNum()
+  {
+  WORD nRet = *cKeyStatus & 32;
+
+  KeybUpdate( 32 );
+  _retl( nRet );
+  }
+
+
+CLIPPER IsCaps()
+  {
+  WORD nRet = *cKeyStatus & 64;
+
+  KeybUpdate( 64 );
+  _retl( nRet );
+  }
+
+
+CLIPPER IsInsert()
+  {
+  WORD nRet = *cKeyStatus & 128;
+
+  KeybUpdate( 128 );
+  _retl( nRet );
+  }
+
+
+HIDE void Speed( WORD nSpeed )
+  {
+  _BX = nSpeed;
+  _AX = 0x0305;
+  geninterrupt( INT_KEYBOARD );
+  }
+
+
+HIDE void KeybUpdate( BYTE nNumber )
+  {
+  if( _parinfo( 1 ) == 4 )
+    if ( _parl( 1 ) )
+      *cKeyStatus ^= nNumber;
+    else
+      *cKeyStatus &= 255 - nNumber;
+  }
+
+
+CLIPPER KeyStuff()
+  {
+  WORD nAscii = _parni( 1 );
+  WORD nCod   = _parni( 2 );
+  WORD nCola;
+
+  nCola  = _fastPeekW( 0, 1052 );
+  _fastPokeW( 0, 1024 + nCola, nAscii + ( nCod * 256 ) );
+  nCola += 2;
+  _fastPokeW( 0, 1052, ( nCola >= _fastPeekW( 0, 1154 ) ? _fastPeekW( 0, 1152 ) : nCola ) );
+  }
+
+

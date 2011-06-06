@@ -1,0 +1,194 @@
+/* 
+------------------------------------------------------------------------
+FASTlib for Clipper, including all source code, examples and any other 
+file has been donated to Open Source community
+
+Manu Roibal. Bilbao, May 7 2011
+
+------------------------------------------------------------------------
+Please, contact me at	manuroibal@gmail.com
+Follow me at Twitter	@manuroibal on Twitter
+My Linkedin profile	www.linkedin.com/manuroibal
+
+Or visit my web site at	www.tonsofit.com
+------------------------------------------------------------------------
+*/
+
+
+#pragma inline
+
+#include "\libs\clipapi\clipapi.h"
+#include "\clip\bc\include\dos.h"
+#include "\libs\clipapi\linker.h"
+
+
+enum PMODE { READY, BUSY, PAPER, NOTHERE, LAN, ISOFF };
+
+
+HIDE WORD GetStatus ( WORD );
+
+
+CLIPPER GetPrinter()
+  {
+  int  nPrinter = _parni( 1 );
+
+  _fastForce();
+  if ( PCOUNT == 0 )
+    nPrinter = 0;
+  _DX = nPrinter;
+  _AH = 2;
+  geninterrupt ( INT_PRINTER );
+  _retni( GetStatus( _AH ) );
+  }
+
+
+HIDE WORD GetStatus( WORD nStatus )
+  {
+  if ( ( nStatus & 0x01 ) !=0 )
+    return( READY );
+  if ( ( nStatus & 0x08 ) !=0 )
+    return( READY );
+  if ( ( nStatus & 0x0F ) !=0 )
+    return( ISOFF );
+  if ( ( nStatus & 0x20 ) !=0 )
+    return( PAPER );
+  if ( ( nStatus & 0x40 ) !=0 )
+    return( NOTHERE );
+  if ( ( nStatus & 0x80 ) !=0 )
+    return( BUSY );
+  return( READY );
+  }
+
+
+
+CLIPPER PrtScr()
+  {
+  geninterrupt( INT_PRINTSCR );
+  }
+
+
+
+CLIPPER SetHardCop()
+  {
+  BOOL lStatus = ( vPointerHardCopy[ 0 ] == 0 );
+
+  if ( PCOUNT == 1 )
+    vPointerHardCopy[ 0 ] = (BYTE)( _parl( 1 ) == 0 );
+  _retl( lStatus );
+  }
+
+
+
+CLIPPER IsPrint()
+  {
+  _AX = 0x100;
+  geninterrupt( INT_MISCEL );
+  _retl( _AL == 0xFF );
+  }
+
+
+
+CLIPPER pDelFile()
+  {
+  EXOREGS sRegs;
+  LPBYTE  cFileRM;
+  LPBYTE  cFilePM = _xalloclow( _parclen( 1 ) + 1 );
+
+  _bcopy( cFilePM, (LPBYTE)_parc( 1 ), _parclen( 1 ) + 1 );
+  cFileRM = ExoRealPtr( cFilePM );
+  sRegs.ds = FP_SEG( cFileRM );
+  sRegs.dx = FP_OFF( cFileRM );
+  sRegs.ax = 0x102;
+  _retl( ! ( ExoRMInterrupt( INT_MISCEL, & sRegs, & sRegs ) & 1 ) );
+  _xfreelow( cFilePM );
+  }
+
+
+
+CLIPPER pDelAll()
+  {
+  EXOREGS sRegs;
+
+  sRegs.ax = 0x103;
+  _retl( !( ExoRMInterrupt( INT_MISCEL, & sRegs, & sRegs ) & 1 ) );
+  }
+
+
+
+CLIPPER pAddFile()
+  {
+  EXOREGS sRegs;
+  LPWORD  nAux;
+  LPBYTE  cPrintPM = _xalloclow( 5 );
+  LPBYTE  cPrintRM;
+  LPBYTE  cFilePM  = _xalloclow( _parclen( 1 ) + 1 );
+  LPBYTE  cFileRM;
+
+  _bcopy( cFilePM, (LPBYTE)_parc( 1 ), _parclen( 1 ) + 1 );
+  cFileRM  = ExoRealPtr( cFilePM );
+  cPrintRM = ExoRealPtr( cPrintPM );
+  cPrintPM[ 0 ] = 0x0;
+  nAux = (LPWORD)( cPrintPM + 1 );
+  *nAux = FP_OFF( cFileRM );
+  nAux = (LPWORD)( cPrintPM + 3 );
+  *nAux = FP_SEG( cFileRM );
+  sRegs.ds = FP_SEG( cPrintRM );
+  sRegs.dx = FP_OFF( cPrintRM );
+  sRegs.ax = 0x101;
+  _retl( ! ( ExoRMInterrupt( INT_MISCEL, & sRegs, & sRegs ) & 1 ) );
+  _xfreelow( cPrintPM );
+  _xfreelow( cFilePM );
+  }
+
+
+
+CLIPPER pError()
+  {
+  EXOREGS sRegs;
+
+  sRegs.ax = 0x106;
+  _retl( !( ExoRMInterrupt( INT_MISCEL, & sRegs, & sRegs ) & 1 ) );
+  }
+
+
+
+CLIPPER pRestart()
+  {
+  EXOREGS sRegs;
+
+  sRegs.ax = 0x105;
+  _retl( !( ExoRMInterrupt( INT_MISCEL, & sRegs, & sRegs ) & 1 ) );
+  }
+
+
+
+CLIPPER pQueue()
+  {
+  EXOREGS sRegs;
+  LPBYTE  cPointer;
+  LPBYTE  cAux;
+  INDEX   nInd;
+  WORD    nMax = 0;
+  WORD    nSelector;
+
+  sRegs.ax = 0x104;
+  ExoRMInterrupt( INT_MISCEL, & sRegs, & sRegs );
+  cPointer  = ExoProtectedPtr( MK_FP( sRegs.ds, sRegs.si ), 0x1000 );
+  nSelector = FP_SEG( cPointer );
+  cAux      = cPointer;
+  for ( nInd = 1; *cPointer != '\0'; nInd ++ )
+    {
+    nMax++;
+    cPointer += 64;
+    }
+  _reta( nMax );
+  cPointer = cAux;
+  for ( nInd = 1; nInd <= nMax; nInd ++ )
+    {
+    _storc( (LPSTR)cPointer, -1, nInd );
+    cPointer += 64;
+    }
+  ExoFreeSelector( nSelector );
+  }
+
+

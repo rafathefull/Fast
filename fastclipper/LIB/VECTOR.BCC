@@ -1,0 +1,48 @@
+/* 
+------------------------------------------------------------------------
+FASTlib for Clipper, including all source code, examples and any other 
+file has been donated to Open Source community
+
+Manu Roibal. Bilbao, May 7 2011
+
+------------------------------------------------------------------------
+Please, contact me at	manuroibal@gmail.com
+Follow me at Twitter	@manuroibal on Twitter
+My Linkedin profile	www.linkedin.com/manuroibal
+
+Or visit my web site at	www.tonsofit.com
+------------------------------------------------------------------------
+*/
+
+
+#pragma inline
+
+#include "\libs\clipapi\clipapi.h"
+#include "\clip\bc\include\dos.h"
+
+
+FARP _fastGetVect( WORD nInterrupt )
+  {
+  FARP cVector;
+
+  asm push es
+  _AH = 0x35;
+  _AL = nInterrupt;
+  geninterrupt( INT_DOS );
+  cVector = MK_FP( _ES, _BX );
+  asm pop es
+  return( cVector );
+  }
+
+
+void _fastSetVect( WORD nInterrupt, FARP cVector )
+  {
+  asm push ds
+  _DS = FP_SEG( cVector );
+  _DX = FP_OFF( cVector );
+  _AH = 0x25;
+  _AL = nInterrupt;
+  geninterrupt( INT_DOS );
+  asm pop ds
+  }
+

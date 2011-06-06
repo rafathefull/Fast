@@ -1,0 +1,163 @@
+;  
+; ------------------------------------------------------------------------
+; FASTlib for Clipper, including all source code, examples and any other 
+; file has been donated to Open Source community
+; 
+; Manu Roibal. Bilbao, May 7 2011
+; 
+; ------------------------------------------------------------------------
+; Please, contact me at			manuroibal@gmail.com
+; Follow me at Twitter			@manuroibal
+; My Linkedin profile			www.linkedin.com/manuroibal
+; 
+; Or visit my web site Tons of IT at	www.tonsofit.com
+; 
+
+
+public CpuType
+
+
+extrn   __retni:far
+
+dgroup  group   datasg
+datasg  segment public  para 'DATA'
+datasg ends
+
+
+_FAST segment word public 'CODE'
+      assume cs:_FAST, ds:datasg, es:datasg
+
+CpuType         proc    far
+                .8086
+                push    bp
+                mov     bp,sp
+                pushf                   ; guardar las FLAGS
+                pushf
+                pop     ax              ; AX = FLAGS
+                and     ax,0FFFh        ; bits 15..12 a 0
+                push    ax
+                popf                    ; intentar borrar bits 15..12
+                pushf
+                pop     ax
+                popf                    ; recuperar FLAGS originales
+                and     ax,0F000h       ; enmascarar bits interesantes
+                cmp     ax,0F000h
+                jnz     A286
+                jmp     NotA286         ; CPU inferior a 286 :'(
+A286:           pushf
+                pushf
+                pop     ax
+                mov     ax,7000h        ; activar IOPL y NT
+                push    ax
+                popf
+                pushf
+                pop     ax
+                popf
+                test    ax,7000h        ; comprobar si han sido alteradas
+                jnz     A386            ; CPU superior o 386 :)
+                mov     ax,2
+                jmp     done
+
+                .386
+A386:           mov     bx,sp           ; guardar SP
+                and     sp,0FFFCh       ; alinear a frontera de word
+                pushfd
+                pushfd
+                pop     eax
+                or      eax,40000h      ; activar AC
+                push    eax
+                popfd
+                pushfd
+                pop     eax
+                popfd
+                mov     sp,bx
+                test    eax,40000h
+                jnz     A486            ; superior o 486 :))
+                mov     ax,3
+                jmp     done
+
+                .486
+A486:           pushfd
+                pop     eax
+                mov     ebx,eax         ; guardar banderas iniciales
+                xor     eax,200000h     ; activar ID ¨?
+                push    eax
+                popfd
+                pushfd
+                pop     eax
+                push    ebx
+                popfd
+                and     eax,200000h     ; enmascarar bit ID
+                and     ebx,200000h     ; idem
+                cmp     eax,ebx
+                jnz     A586            ; Pentium o superior :)))
+                mov     ax,4
+                jmp     done
+
+A586:           mov     ax,5
+                jmp     done
+
+                .8086
+NotA286:        mov     ax,cs
+                mov     es,ax
+                mov     di,offset Prefectch
+                mov     cx,3d
+                mov     ax,90h
+                mov     dx,1d
+                std                     ; decrementar DI
+                rep     stosb           ; colocar 3 NOPs
+                nop
+                nop
+                nop
+                dec     dx
+                nop
+Prefectch:      nop
+                or      dx,dx           ; comprobar si ha tomado efecto
+                jnz     A8x88           ; un 088  :'O
+                mov     cx,20h
+                mov     ax,01h
+                shl     ax,cl
+                or      ax,ax           ; comprobar el shift
+                jz      NotA80186
+                mov     ax,13           ; un 80186 :'OO
+                jmp     done
+NotA80186:      mov     dl,01h
+                mov     al,01h
+                xor     ah,ah           ; forzar un ZF
+                xor     ah,ah
+                mul     dl
+                jz      AV30            ; compobar si se ha alterado ZF
+                mov     ax,01h
+                jmp     done
+AV30:           mov     ax,11           ; estos de NEC ...
+                jmp     done
+A8x88:          mov     cx,20h
+                mov     ax,01h
+                shl     ax,cl
+                or      ax,ax
+                jz      NotA80188
+                mov     ax,12
+                jmp     done
+NotA80188:      mov     dl,01h
+                mov     al,01h
+                xor     ah,ah
+                xor     ah,ah
+                mul     dl
+                jz      AV20
+                xor     ax,ax
+                jmp     done
+AV20:           mov     ax,10
+Done:
+                push    ax
+                mov     ax,seg dgroup       ; point ds to Clipper's dataseg
+                mov     ds,ax               ; so it doesn't get all confused
+                call    __retni
+                add     sp,2
+                pop     bp
+                ret
+CpuType         endp
+
+                _FAST Ends                            ; End of code Segment
+
+                End
+

@@ -1,0 +1,120 @@
+/* 
+------------------------------------------------------------------------
+FASTlib for Clipper, including all source code, examples and any other 
+file has been donated to Open Source community
+
+Manu Roibal. Bilbao, May 7 2011
+
+------------------------------------------------------------------------
+Please, contact me at	manuroibal@gmail.com
+Follow me at Twitter	@manuroibal on Twitter
+My Linkedin profile	www.linkedin.com/manuroibal
+
+Or visit my web site at	www.tonsofit.com
+------------------------------------------------------------------------
+*/
+
+
+#pragma inline
+
+#include "\libs\clipapi\clipapi.h"
+#include "\clip\bc\include\dos.h"
+#include "\libs\clipapi\linker.h"
+
+
+CLIPPER Implode()
+  {
+  int    i;
+  USHORT row,col,row2,col2,reltop,relbot;
+  USHORT nrows,trow,brow,rowlen,offset;
+  USHORT topleft,topright,reltr,reltl;
+  int    delay;
+  LPSTR  string;
+
+  _fastForce();
+  row      = _parni(1);
+  col      = _parni(2);
+  row2     = _parni(3);
+  col2     = _parni(4);
+  string   = _parc(5);
+  delay    = ( ( PCOUNT < 6 ) ? 10 : _parni( 6 ) ) * 10;
+  nrows    = row2-row+1;
+  rowlen   = col2-col+1;
+  trow     = row;
+  brow     = row2;
+  reltop   = 0;
+  relbot   = nrows-1;
+  topleft  = row*80+col;
+  topright = topleft+rowlen-1;
+  reltl    = 0;
+  reltr    = rowlen*2-2;
+  while (nrows)
+    {
+    _fastWait( delay );
+    offset = reltop * ( rowlen * 2 );
+    _bcopy( (LPBYTE)( vPointerText + ( trow * 80 ) ),
+            (LPBYTE)( string + offset ),
+            ( col2 - col + 1 ) * 2 );
+    nrows--;
+    trow++;
+    reltop++;
+    if ( ! ( nrows ) )
+      break;
+    offset = relbot * ( rowlen * 2 );
+    _bcopy( (LPBYTE)( vPointerText + ( brow * 80 ) ),
+            (LPBYTE)( string + offset ),
+            ( col2 - col + 1 ) * 2 );
+    nrows--;
+    brow--;
+    relbot--;
+    for ( i = 0; i <= row2-row; i++)
+      {
+      (vPointerText+topleft+(80*i))->ascii  = string[reltl+(rowlen*2*i)];
+      (vPointerText+topleft+(80*i))->attrib = string[reltl+(rowlen*2*i)+1];
+      }
+    topleft++;
+    reltl+=2;
+    for ( i = 0; i <= row2-row; i++)
+      {
+      (vPointerText+topright+(80*i))->ascii  = string[reltr+(rowlen*2*i)];
+      (vPointerText+topright+(80*i))->attrib = string[reltr+(rowlen*2*i)+1];
+      }
+    topright--;
+    reltr-=2;
+    }
+  }
+
+
+CLIPPER FastPrint()
+  {
+  LPSTR cString               = _parc( 3 );
+  register WORD nAttr         = _parni( 4 );
+  struct VideoT far *NewPoint = vPointerText + _parni( 1 ) * 80 + _parni( 2 );
+
+  while ( * cString )
+    {
+    NewPoint->ascii      = *( cString++ );
+    (NewPoint++)->attrib = nAttr;
+    }
+  }
+
+
+CLIPPER outxy()
+  {
+  EXOREGS sRegs;
+  LPBYTE  cHigh  = _xalloclow( _parclen( 3 ) + 1 );
+  LPBYTE  cLow   = ExoRealPtr( cHigh );
+
+  _bcopy( cHigh, (LPBYTE)_parc( 3 ), _parclen( 3 ) + 1 );
+  sRegs.bx = (BYTE)_parni( 4 );
+  sRegs.dx = ( _parni( 2 ) << 8 ) + _parni( 1 );
+  sRegs.cx = _parclen( 3 );
+  sRegs.es = FP_SEG( cLow );
+  sRegs.bp = FP_OFF( cLow );
+  sRegs.ax = ( 0x13 << 8 ) + 0x1;
+  ExoRMInterrupt( INT_VIDEO, & sRegs, & sRegs );
+  _gtSetPos( _parni( 2 ), _parni( 1 ) + _parclen( 3 ) );
+  _xfreelow( cHigh );
+  }
+
+
