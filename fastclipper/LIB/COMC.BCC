@@ -1,0 +1,440 @@
+/* 
+------------------------------------------------------------------------
+FASTlib for Clipper, including all source code, examples and any other 
+file has been donated to Open Source community
+
+Manu Roibal. Bilbao, May 7 2011
+
+------------------------------------------------------------------------
+Please, contact me at	manuroibal@gmail.com
+Follow me at Twitter	@manuroibal on Twitter
+My Linkedin profile	www.linkedin.com/manuroibal
+
+Or visit my web site at	www.tonsofit.com
+------------------------------------------------------------------------
+*/
+
+
+#pragma inline
+
+#include "\libs\clipapi\clipapi.h"
+#include "\clip\bc\include\dos.h"
+#include "\libs\clipapi\linker.h"
+
+
+HIDE void interrupt far com_interrupt_driver();
+
+HIDE int _IsReady( void );
+
+enum par_code { COM_NONE, COM_EVEN, COM_ODD, COM_ZERO, COM_ONE };
+
+#define TXBUFF  0
+#define RXBUFF  0
+#define DLLSB   0
+#define DLMSB   1
+#define IER     1
+#define IIR     2
+#define LCR     3
+#define MCR     4
+#define LSR     5
+#define MSR     6
+
+#define DTR     0x01
+#define RTS     0x02
+#define OUT1    0x04
+#define OUT2    0x08
+#define LPBK    0x10
+
+#define DCTS    0x01
+#define DDSR    0x02
+#define TERI    0x04
+#define DRLSD   0x08
+#define CTS     0x10
+#define DSR     0x20
+#define RI      0x40
+#define RLSD    0x80
+
+#define DATA5   0x00
+#define DATA6   0x01
+#define DATA7   0x02
+#define DATA8   0x03
+
+#define STOP1   0x00
+#define STOP2   0x04
+
+#define NOPAR   0x00
+#define ODDPAR  0x08
+#define EVNPAR  0x18
+#define STKPAR  0x28
+#define ZROPAR  0x38
+
+#define RDR     0x01
+#define ERRS    0x1E
+#define TXR     0x20
+
+#define DR      0x01
+#define THRE    0x02
+#define RLS     0x04
+
+#define MAX_PORT	4
+
+#define TRUE		1
+#define FALSE		0
+
+HIDE int uart_data;
+HIDE int uart_ier;
+HIDE int uart_iir;
+HIDE int uart_lcr;
+HIDE int uart_mcr;
+HIDE int uart_lsr;
+HIDE int uart_msr;
+
+HIDE char com_installed;
+HIDE int  intnum;
+HIDE char i8259bit;
+HIDE char old_i8259_mask;
+HIDE char old_ier;
+HIDE char old_mcr;
+HIDE void ( interrupt far *old_vector)();
+
+
+
+#define TX_QUEUE_SIZE  4096
+
+HIDE HANDLE htx_queue;
+HIDE LPSTR  tx_queue;
+HIDE int    tx_in;
+HIDE int    tx_out;
+HIDE int    tx_chars;
+
+#define RX_QUEUE_SIZE  16384
+
+HIDE HANDLE hrx_queue;
+HIDE LPSTR  rx_queue;
+HIDE int    rx_in;
+HIDE int    rx_out;
+HIDE int    rx_chars;
+
+
+HIDE const int   uart_base[]   = { 0x3F8, 0x2F8, 0x3E8, 0x2E8 };
+HIDE const char  intnums[]     = { 0x0C,  0x0B,  0x0C,  0x0B };
+HIDE const char  i8259levels[] = { 4,     3,     4,     3 };
+
+
+CLIPPER ComInst()
+  {
+  int portnum = _parni( 1 );
+
+  _fastForce();
+  if ( com_installed )
+    {
+    _retni( 3 );
+    return;
+    }
+  if ( ( portnum < 1 ) || ( portnum > MAX_PORT ) )
+    {
+    _retni( 1 );
+    return;
+    }
+  uart_data = uart_base[ portnum - 1 ];
+  uart_ier  = uart_data + IER;
+  uart_iir  = uart_data + IIR;
+  uart_lcr  = uart_data + LCR;
+  uart_mcr  = uart_data + MCR;
+  uart_lsr  = uart_data + LSR;
+  uart_msr  = uart_data + MSR;
+  intnum    = intnums[ portnum - 1 ];
+  i8259bit  = 1 << i8259levels[ portnum - 1 ];
+  old_ier = inportb( uart_ier );
+  outportb( uart_ier, 0 );
+  if ( inportb( uart_ier ) != 0 )
+    {
+    _retni( 2 );
+    return;
+    }
+  disable();
+  old_i8259_mask = inportb( 0x21 );
+  outportb( 0x21, old_i8259_mask | i8259bit );
+  enable();
+  tx_chars = tx_in = tx_out = 0;
+  rx_chars = rx_in = rx_out = 0;
+  old_vector = _fastGetVect( intnum );
+  _fastSetVect( intnum, com_interrupt_driver );
+  com_installed = TRUE;
+  outportb( uart_lcr, DATA8 + NOPAR + STOP1 );
+  disable();
+  old_mcr = inportb( uart_mcr );
+  outportb( uart_mcr, (old_mcr & DTR) | (OUT2 + RTS ) );
+  enable();
+  outportb( uart_ier, DR );
+  disable();
+  outportb( 0x21, inportb(0x21) & ~i8259bit );
+  enable();
+  htx_queue = _vAlloc( TX_QUEUE_SIZE, 0 );
+  tx_queue  = _vWire( htx_queue );
+  hrx_queue = _vAlloc( RX_QUEUE_SIZE, 0 );
+  rx_queue  = _vWire( hrx_queue );
+  _retni( 0 );
+  }
+
+
+CLIPPER ComUnInst()
+  {
+  if (com_installed)
+    {
+    outportb(uart_mcr, old_mcr);
+    outportb(uart_ier, old_ier);
+    disable();
+    outportb(0x21, (inportb(0x21)  & ~i8259bit) | (old_i8259_mask &  i8259bit));
+    enable();
+    _fastSetVect(intnum, old_vector);
+    com_installed = FALSE;
+    _vUnWire( htx_queue );
+    _vFree( htx_queue );
+    _vUnWire( hrx_queue );
+    _vFree( hrx_queue );
+    }
+  }
+
+
+CLIPPER ComSpeed()
+  {
+  WORD nSpeed = (WORD)_fastDiv( 115200L, (DWORD)_parni( 1 ) );
+
+  if ( com_installed )
+    {
+    if ( nSpeed < 2 )
+      nSpeed = 2;
+    disable();
+    outportb( uart_lcr, inportb( uart_lcr ) | 0x80 );
+    if ( _parinfo( 0 ) > 0 )
+      outport( uart_data, nSpeed );
+    nSpeed = (WORD)_fastDiv( 115200L, (DWORD)inportb( uart_data ) );
+    outportb( uart_lcr, inportb( uart_lcr ) & ~0x80 );
+    enable();
+    }
+  _retni( nSpeed );
+  }
+
+
+HIDE const char lcr_vals[] =
+  {
+  DATA8 + NOPAR,
+  DATA7 + EVNPAR,
+  DATA7 + ODDPAR,
+  DATA7 + STKPAR,
+  DATA7 + ZROPAR
+  };
+
+
+CLIPPER ComParity()
+  {
+  BYTE cStatus;
+  BYTE cParity;
+  BYTE cStop;
+  enum par_code parity = _parni( 1 );
+  int  stop_bits       = _parni( 2 );
+
+  disable();
+  if ( _parinfo( 0 ) > 0 )
+    outportb( uart_lcr, lcr_vals[ parity ] | ( ( stop_bits == 2 ) ? STOP2 : STOP1 ) );
+  cStatus = inportb( uart_lcr );
+  enable();
+  cStop   = ( cStatus >> 2 ) & 1;
+  cParity = ( cStatus >> 3 ) & 7;
+  cParity = ( cParity == 5 ? 3 : cParity );
+  cParity = ( cParity == 7 ? 4 : cParity );
+  _reta( 2 );
+  _storni( (WORD)cParity,   -1, 1 );
+  _storni( (WORD)cStop + 1, -1, 2 );
+  }
+
+
+CLIPPER ComLowDTR()
+  {
+  if (com_installed)
+    {
+    disable();
+    outportb(uart_mcr, inportb(uart_mcr) & ~DTR);
+    enable();
+    }
+  }
+
+
+CLIPPER ComHighDTR()
+  {
+  if (com_installed)
+    {
+    disable();
+    outportb(uart_mcr, inportb(uart_mcr) | DTR);
+    enable();
+    }
+  }
+
+
+CLIPPER ComOutput()
+  {
+  char c = (char)_parni(1);
+
+  if (com_installed)
+    {
+    while ( ! _IsReady() );
+    disable();
+    tx_queue[tx_in++] = c;
+    if (tx_in == TX_QUEUE_SIZE) tx_in = 0;
+    tx_chars++;
+    outportb(uart_ier, inportb(uart_ier) | THRE);
+    enable();
+    }
+  }
+
+
+CLIPPER ComOutputS()
+  {
+  LPSTR cCadena = _parc( 1 );
+  WORD  nLen    = _parclen( 1 );
+  INDEX nInd;
+
+  if (com_installed)
+    {
+    for ( nInd = 0; nInd < nLen; nInd++ )
+      {
+      while ( ! _IsReady() ) ;
+      disable();
+      tx_queue[tx_in++] = cCadena[ nInd ];
+      if (tx_in == TX_QUEUE_SIZE) tx_in = 0;
+      tx_chars++;
+      outportb(uart_ier, inportb(uart_ier) | THRE);
+      enable();
+      }
+    }
+  }
+
+
+CLIPPER ComInput()
+  {
+  char rv;
+
+  if ( ! rx_chars || ! com_installed )
+    return;
+  disable();
+  rv = rx_queue[rx_out++];
+  if ( rx_out == RX_QUEUE_SIZE )
+	rx_out = 0;
+  rx_chars--;
+  enable();
+  _retni( (WORD)rv );
+  }
+
+
+CLIPPER ComInputS()
+  {
+  LPSTR cString = _parc( 1 );
+  WORD  nMax    = _parni( 2 );
+  WORD  nInd    = 0;
+
+  disable();
+  while ( ( rx_chars ) && ( com_installed ) && ( nInd < nMax ) )
+    {
+    cString[ nInd++ ] = rx_queue[rx_out++];
+    if ( rx_out == RX_QUEUE_SIZE )
+      rx_out = 0;
+    rx_chars--;
+    }
+  enable();
+  _storclen( cString, nMax, 1 );
+  _retni( nInd );
+  }
+
+
+CLIPPER ComReady()
+  {
+  _retl( ( tx_chars < TX_QUEUE_SIZE ) || ( ! com_installed ) );
+  }
+
+
+CLIPPER ComOutEmpt()
+  {
+  _retl( ! tx_chars || ( ! com_installed ) );
+  }
+
+
+CLIPPER ComInEmpt()
+  {
+  _retl ( ! rx_chars || ( ! com_installed ) );
+  }
+
+
+CLIPPER ComOutFlh()
+  {
+  disable();
+  tx_chars = tx_in = tx_out = 0;
+  enable();
+  }
+
+
+CLIPPER ComInFlh()
+  {
+  disable();
+  rx_chars = rx_in = rx_out = 0;
+  enable();
+  }
+
+
+CLIPPER ComCarrier(void)
+  {
+  _retl( com_installed && ( inportb( uart_msr ) & RLSD ) );
+  }
+
+
+
+
+HIDE int _IsReady()
+  {
+  return( ( tx_chars < TX_QUEUE_SIZE ) || ( ! com_installed ) );
+  }
+
+
+HIDE void interrupt com_interrupt_driver()
+  {
+  char    iir;
+  char    c;
+
+  while (!((iir = inportb(uart_iir)) & 1))
+    {
+    switch (iir)
+      {
+      case 0:
+        inportb(uart_msr);
+		break;
+      case 2:
+        if (tx_chars <= 0)
+            outportb(uart_ier, inportb(uart_ier) & ~2);
+        else
+          {
+          if (inportb(uart_lsr) & TXR)
+            {
+            outportb(uart_data, tx_queue[tx_out++]);
+            if (tx_out == TX_QUEUE_SIZE)
+              tx_out = 0;
+            tx_chars--;
+            }
+          }
+        break;
+      case 4:
+        c = inportb(uart_data);
+        if (rx_chars < RX_QUEUE_SIZE)
+          {
+          rx_queue[rx_in++] = c;
+          if (rx_in == RX_QUEUE_SIZE)
+            rx_in = 0;
+          rx_chars++;
+          }
+		break;
+      case 6:
+        inportb(uart_lsr);
+		break;
+      }
+    }
+  outportb(0x20, 0x20);
+  }

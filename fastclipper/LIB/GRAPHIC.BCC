@@ -1,0 +1,120 @@
+/* 
+------------------------------------------------------------------------
+FASTlib for Clipper, including all source code, examples and any other 
+file has been donated to Open Source community
+
+Manu Roibal. Bilbao, May 7 2011
+
+------------------------------------------------------------------------
+Please, contact me at	manuroibal@gmail.com
+Follow me at Twitter	@manuroibal on Twitter
+My Linkedin profile	www.linkedin.com/manuroibal
+
+Or visit my web site at	www.tonsofit.com
+------------------------------------------------------------------------
+*/
+
+
+#pragma inline
+
+#include "\libs\clipapi\clipapi.h"
+#include "\clip\bc\include\dos.h"
+
+
+
+CLIPPER Origin()
+  {
+  int StartOffset  = 80 * _parni(2) + _parni(1) / 4;
+  int HorPelPan    = 2 * ( _parni(1) & 3 );
+  int StateRegPort = 0;
+
+  _fastForce();
+  asm push es
+  if ( PCOUNT == 2 )
+    {
+    _BX = StartOffset;
+    _BH = _BL;
+    _BL = 0xD;
+    _CX = StartOffset;
+    _CL = 0xC;
+    _AX = 0x40;
+    asm mov es,ax
+    asm mov dx,es:[63h]
+    StateRegPort = _DX + 6;
+    }
+  while ( ! ( inportb( StateRegPort ) & 1 ) );
+  asm {
+    mov     dx,3d4h
+    mov     ax,bx
+    out     dx,ax
+    mov     ax,cx
+    out     dx,ax
+    cli
+    mov     dx,StateRegPort
+    in      al,dx
+    mov     dx,3C0h
+    mov     al,13h OR 20h
+    out     dx,al
+    mov     ax,HorPelPan
+    out     dx,al
+    sti
+    }
+  while ( ! ( inportb( StateRegPort ) & 8 ) );
+  asm pop es
+  }
+
+
+
+CLIPPER HidePlane()
+  {
+  _fastOutPortB( 0x3C5, 0xF );
+  }
+
+
+BOOL _fastIsFastGT()
+  {
+  WORD nReal = 25 * 80 * 2;
+  WORD nSize;
+
+  _gtRectSize( 0, 0, 24, 79, & nSize );
+  return( ( nSize != nReal ) );
+  }
+
+
+CLIPPER IsFastGT()
+  {
+  _retl( _fastIsFastGT() );
+  }
+
+
+CLIPPER GetPalette()
+  {
+  LPBYTE cPalette = _xgrab( 768 );
+
+  _fastGetPalette( cPalette );
+  _retclen( (LPSTR)cPalette, 768 );
+  _xfree( cPalette );
+  }
+
+
+CLIPPER SetPalette()
+  {
+  if ( PCOUNT == 1 )
+    _fastSetPalette( _parc( 1 ), _parclen( 1 ) / 3 );
+  }
+
+
+CLIPPER _PcxVga()
+  {
+  LPBYTE cPCX = (LPBYTE)_parc( 1 );
+  WORD   nLen = _parclen( 1 );
+  INDEX  nInd;
+
+  if ( PCOUNT == 1 )
+    {
+    for ( nInd = 0; nInd < nLen; nInd++ )
+      cPCX[ nInd ] >>= 2;
+    _retclen( (LPSTR)cPCX, nLen );
+    }
+  }
+

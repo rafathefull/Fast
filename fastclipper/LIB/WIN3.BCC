@@ -1,0 +1,148 @@
+/* 
+------------------------------------------------------------------------
+FASTlib for Clipper, including all source code, examples and any other 
+file has been donated to Open Source community
+
+Manu Roibal. Bilbao, May 7 2011
+
+------------------------------------------------------------------------
+Please, contact me at	manuroibal@gmail.com
+Follow me at Twitter	@manuroibal on Twitter
+My Linkedin profile	www.linkedin.com/manuroibal
+
+Or visit my web site at	www.tonsofit.com
+------------------------------------------------------------------------
+*/
+
+
+#pragma inline
+
+#include "\libs\clipapi\clipapi.h"
+#include "\clip\bc\include\dos.h"
+#include "\libs\clipapi\linker.h"
+
+
+
+CLIPPER IsWin3()
+  {
+  EXOREGS sRegs;
+  BYTE    nRet;
+
+  _fastForce();
+  sRegs.ax = 0x1600;
+  ExoRMInterrupt( INT_MISCEL, & sRegs, & sRegs );
+  nRet = sRegs.ax & 0xFF;
+  _retl( ( nRet != 0x00 ) && ( nRet != 0x80 ) );
+  }
+
+
+CLIPPER WinVersion()
+  {
+  EXOREGS sRegs;
+  BYTE    nRet;
+  BYTE    cBuffer[ 5 ];
+
+  _bset( cBuffer, 32, 5 );
+  sRegs.ax = 0x1600;
+  ExoRMInterrupt( INT_MISCEL, & sRegs, & sRegs );
+  nRet = sRegs.ax & 0xFF;
+  if ( ( nRet != 0x00 ) && ( nRet != 0x80 ) )
+    {
+    _fastStr( cBuffer + 0, sRegs.ax & 0xFF );
+    cBuffer[ 2 ] = '.';
+    _fastStr( cBuffer + 3, sRegs.ax >> 8 );
+    _retclen( (LPSTR)cBuffer, 5 );
+    }
+  else
+    _retclen( "00.00", 5 );
+  }
+
+
+CLIPPER WinOpenCli()
+  {
+  EXOREGS sRegs;
+
+  sRegs.ax = 0x1701;
+  ExoRMInterrupt( INT_MISCEL, & sRegs, & sRegs );
+  _retl( sRegs.ax );
+  }
+
+
+CLIPPER WinSetClip()
+  {
+  EXOREGS sRegs;
+  LPBYTE  cHigh  = _xalloclow( _parclen( 1 ) + 1 );
+  LPBYTE  cLow   = ExoRealPtr( cHigh );
+
+  _bcopy( cHigh, (LPBYTE)_parc( 1 ), _parclen( 1 ) + 1 );
+  sRegs.es = FP_SEG( cLow );
+  sRegs.bx = FP_OFF( cLow );
+  sRegs.si = 0;
+  sRegs.cx = _parclen( 1 );
+  sRegs.dx = 0x0001;
+  sRegs.ax = 0x1703;
+  ExoRMInterrupt( INT_MISCEL, & sRegs, & sRegs );
+  _xfreelow( cHigh );
+  _retl( sRegs.ax );
+  }
+
+
+CLIPPER WinCloseCl()
+  {
+  EXOREGS sRegs;
+
+  sRegs.ax = 0x1708;
+  ExoRMInterrupt( INT_MISCEL, & sRegs, & sRegs );
+  _retl( sRegs.ax );
+  }
+
+
+CLIPPER WinGetClip()
+  {
+  EXOREGS sRegs;
+  WORD    uiLow, uiHigh;
+  LPBYTE  szBufferHigh;
+  LPBYTE  szBufferLow;
+
+  sRegs.dx = 0x0001;
+  sRegs.ax = 0x1704;
+  ExoRMInterrupt( INT_MISCEL, & sRegs, & sRegs );
+  uiLow  = sRegs.ax;
+  uiHigh = sRegs.dx;
+  if ( MAKELONG( uiLow, uiHigh ) <= 0x7FFF )
+    {
+    szBufferHigh = _xalloclow( uiLow );
+    szBufferLow  = ExoRealPtr( szBufferHigh );
+    sRegs.dx = 0x0001;
+    sRegs.es = FP_SEG( szBufferLow );
+    sRegs.bx = FP_OFF( szBufferLow );
+    sRegs.ax = 0x1705;
+    ExoRMInterrupt( INT_MISCEL, & sRegs, & sRegs );
+    _retc( (LPSTR)szBufferHigh );
+    _xfreelow( szBufferHigh );
+    }
+  }
+
+
+CLIPPER WinClipSiz()
+  {
+  EXOREGS sRegs;
+
+  sRegs.dx = 0x0001;
+  sRegs.ax = 0x1704;
+  ExoRMInterrupt( INT_MISCEL, & sRegs, & sRegs );
+  _retnl( MAKELONG( sRegs.ax, sRegs.dx ) );
+  }
+
+
+CLIPPER WinDelClip()
+  {
+  EXOREGS sRegs;
+
+  sRegs.ax = 0x1702;
+  ExoRMInterrupt( INT_MISCEL, & sRegs, & sRegs );
+  _retl( sRegs.ax );
+  }
+
+
+

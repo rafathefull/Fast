@@ -1,0 +1,305 @@
+/* 
+------------------------------------------------------------------------
+FASTlib for Clipper, including all source code, examples and any other 
+file has been donated to Open Source community
+
+Manu Roibal. Bilbao, May 7 2011
+
+------------------------------------------------------------------------
+Please, contact me at	manuroibal@gmail.com
+Follow me at Twitter	@manuroibal on Twitter
+My Linkedin profile	www.linkedin.com/manuroibal
+
+Or visit my web site at	www.tonsofit.com
+------------------------------------------------------------------------
+*/
+
+
+#pragma inline
+
+#include "\libs\clipapi\clipapi.h"
+#include "\clip\bc\include\dos.h"
+#include "\libs\clipapi\linker.h"
+
+
+#define PSZ  768
+#define BSZ  8192
+
+
+struct gifhead {
+  char s[6];
+  WORD w, h;
+  BYTE c, b, z;
+  };
+
+struct image {
+  WORD l, t, w, h;
+  BYTE m;
+  };
+
+HIDE int z[] = {    0,     1,     3,     7,   0xf,   0x1f,   0x3f,   0x7f,
+                 0xff, 0x1ff, 0x3ff, 0x7ff, 0xfff, 0x1fff, 0x3fff, 0x7fff };
+
+
+HIDE WORD _readc(int f)
+  {
+  BYTE c;
+
+  if (_tread(f, &c, 1) == 1)
+    return c;
+  else
+    return -1;
+  }
+
+
+HIDE void delzw( int g, int n, int lVesa, WORD nGranularidad )
+  {
+  int    n2, m, m2, k, c, f, i, d, j, a;
+  LPBYTE pcVideo;
+  LPBYTE p, q, b, u, r, s;
+  LPWORD t;
+  LPBYTE w, y;
+  HANDLE hY, hB, hR, hS, hT;
+  WORD   nAux;
+  int    centinela = 1;
+  int    nBanco = 0;
+  int    nTimes = 0;
+
+  hY = _vAlloc( BSZ, 0 );
+  y  = _vLock( hY );
+  hB = _vAlloc( 255, 0 );
+  b  = _vLock( hB );
+  hR = _vAlloc( 4096, 0 );
+  r  = _vLock( hR );
+  hS = _vAlloc( 4096, 0 );
+  s  = _vLock( hS );
+  hT = _vAlloc( 4096 * 2, 0 );
+  t  = ( LPWORD )_vLock( hT );
+  w = y;
+  p = q = b;
+  j = 8;
+  if (n < 2 || n > 8)
+    goto SALIR;
+  n2 = 1 << n;
+  k = n2 + 2;
+  m2 = 1 << (m = n + 1);
+  f = d = -1;
+  pcVideo = vPointerGraph;
+  while ( 1 )
+    {
+    if (j == 8)
+      {
+      if (++p >= q && (((a = _readc(g)) < 1) || (q = (p = b) + _tread(g, b, a)) < b + a))
+        goto SALIR;
+      j = 0;
+      }
+    c = *p;
+    if ((i = m + j) <= 8)
+      {
+      *p >>= m;
+      j = i;
+      }
+    else
+      {
+      if (++p >= q && (((a = _readc(g)) < 1) || (q = (p = b) + _tread(g, b, a)) < b + a))
+        goto SALIR;
+      c |= *p << (8 - j);
+      if (i <= 16)
+        *p >>= (j = i - 8);
+      else
+        {
+        if (++p >= q && (((a = _readc(g)) < 1) || (q = (p = b) + _tread(g, b, a)) < b + a))
+          goto SALIR;
+        c |= *p << (16 - j);
+        *p >>= (j = i - 16);
+        }
+      }
+    c &= z[m];
+    i = c;
+    if (c == n2 + 1)
+      break;
+    if (c > k)
+      goto SALIR;
+    if (c == n2)
+      {
+      k = n2 + 2;
+      m2 = 1 << (m = n + 1);
+      f = d = -1;
+      continue;
+      }
+    u = r;
+    if (c == k)
+      {
+      if (d == -1)
+        goto SALIR;
+      *u++ = f;
+      c = d;
+      }
+    while (c >= n2)
+      {
+      *u++ = s[c];
+      c = t[c];
+      }
+    f = c;
+    do {
+      *w++ = c;
+      if (w == y + BSZ)
+        {
+        _bcopy( pcVideo, y, BSZ );
+        pcVideo = vPointerGraph + BSZ * centinela++;
+        if ( lVesa )
+          {
+          nTimes ++;
+          if ( nTimes > 3 )
+            {
+            nBanco++;
+            nTimes = 0;
+
+            nAux = nBanco * ( 64 / nGranularidad );
+            asm cli
+            asm mov dx, nAux;
+            asm mov bx, 0x0;
+            asm mov ax, 0x4f05;
+            geninterrupt( INT_VESA );
+            asm sti
+
+            pcVideo = vPointerGraph;
+            centinela = 1;
+            }
+          }
+        w = y;
+        }
+      if (u <= r)
+        break;
+      c = *--u;
+    } while (1);
+    if (k < 4096 && d != -1)
+      {
+      t[k] = d;
+      s[k] = f;
+      if (++k >= m2 && m < 12)
+        m2 = 1 << ++m;
+      }
+    d = i;
+    }
+  if (_readc(g) != 0)
+    goto SALIR;
+  if (w - y)
+    _bcopy( pcVideo, y, BSZ );
+  SALIR:
+  _vUnLock( hY );
+  _vUnLock( hB );
+  _vUnLock( hR );
+  _vUnLock( hS );
+  _vUnLock( hT );
+  _vFree( hY );
+  _vFree( hB );
+  _vFree( hR );
+  _vFree( hS );
+  _vFree( hT );
+  }
+
+
+HIDE WORD ShowGif( LPSTR cFile, WORD lMode )
+  {
+  EXOREGS sRegs;
+  WORD    n;
+  int     c;
+  INDEX   nInd;
+  struct  gifhead g;
+  struct  image d;
+  HANDLE  hPaleta = _vAlloc( PSZ, 0 );
+  LPBYTE  Paleta  = _vLock( hPaleta );
+  int f;
+  WORD    nModo;
+  LPBYTE  cLow;
+  VESA_MODE_INFO * cBuffer;
+  WORD    nGranularidad;
+
+  _fastForce();
+  if ( lMode )
+    {
+    sRegs.ax = 0x4f03;
+    ExoRMInterrupt( INT_VESA, & sRegs, & sRegs );
+    nModo    = sRegs.bx;
+    sRegs.bx = nModo + 0x8000;
+    sRegs.ax = 0x4f02;
+    ExoRMInterrupt( INT_VESA, & sRegs, & sRegs );
+    cBuffer  = _xalloclow( 256 );
+    cLow     = ExoRealPtr( (LPBYTE)cBuffer );
+    sRegs.es = FP_SEG( cLow );
+    sRegs.di = FP_OFF( cLow );
+    sRegs.cx = nModo;
+    sRegs.ax = 0x4F01;
+    ExoRMInterrupt( INT_VESA, & sRegs, & sRegs );
+    nGranularidad = cBuffer->WinGranularity;
+    _xfreelow( (LPBYTE)cBuffer );
+    }
+  if ( ( f = _topen( cFile, 64 ) ) == -1 )
+    return( 0 );
+  _tread(f, (LPBYTE)&g, sizeof( g ) );
+  if (g.c & 0x80)
+    {
+    c = 3 * (1 << ((g.c & 7) + 1));
+    if (_tread(f, Paleta, c) != c)
+      return( 0 );
+    for ( nInd = 0; nInd < c; nInd++ )
+      Paleta[ nInd ] >>= 2;
+    for ( ; nInd < PSZ; nInd++)
+      Paleta[ nInd ] = 0;
+    }
+  asm push es
+  _ES = FP_SEG( Paleta );
+  _DX = FP_OFF( Paleta );
+  _BX = 0x0;
+  _CX = 0x100;
+  _AX = 0x1012;
+  geninterrupt( INT_VIDEO );
+  asm pop es
+  _vUnLock( hPaleta );
+  _vFree( hPaleta );
+  while ((c = _readc(f)) == ',' || c == '!')
+    if (c == ',')
+      {
+      nInd = ( g.c & 7 ) + 1;
+      if ( _tread( f, (LPBYTE)&d, sizeof( d ) ) != sizeof( d ) )
+        return( 0 );
+      if ( d.m & 0x80 )
+        {
+        nInd = ( d.m & 7 ) + 1;
+        if ( _tlseek( f, (long)( 3 * ( 1 << nInd ) ), 1 ) == -1 )
+          return( 0 );
+        }
+      if ( ( c = _readc( f ) ) == -1 )
+        return( 0 );
+      delzw( f, c, lMode, nGranularidad );
+      }
+    else
+      {
+      if ( ( c = _readc( f ) ) == -1 )
+        return( 0 );
+      n = 0;
+      while ( ( c = _readc( f ) ) != 0 )
+        {
+        if ( c == -1 || _tlseek( f, (long) c, 1 ) == -1 )
+          return( 0 );
+        n++;
+        }
+      }
+  _tclose( f );
+  return( 1 );
+  }
+
+
+CLIPPER GIFShow256()
+  {
+  _retl( ShowGif( _parc( 1 ), FALSE ) );
+  }
+
+
+CLIPPER GIFShowVES()
+  {
+  _retl( ShowGif( _parc( 1 ), TRUE ) );
+  }
+
+

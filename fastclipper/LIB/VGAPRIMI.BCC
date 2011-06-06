@@ -1,0 +1,652 @@
+/* 
+------------------------------------------------------------------------
+FASTlib for Clipper, including all source code, examples and any other 
+file has been donated to Open Source community
+
+Manu Roibal. Bilbao, May 7 2011
+
+------------------------------------------------------------------------
+Please, contact me at	manuroibal@gmail.com
+Follow me at Twitter	@manuroibal on Twitter
+My Linkedin profile	www.linkedin.com/manuroibal
+
+Or visit my web site at	www.tonsofit.com
+------------------------------------------------------------------------
+*/
+
+
+#pragma inline
+
+#include "\libs\clipapi\clipapi.h"
+#include "\clip\bc\include\dos.h"
+
+#define SGN(a)      (((a)<0) ? -1 : 1)
+
+
+HIDE int abs( int nAbs )
+  {
+  if ( nAbs < 0 )
+    nAbs *= -1;
+  return( nAbs );
+  }
+
+
+HIDE BYTE _fastGetPixel( WORD pARGx, WORD pARGy )
+  {
+  BYTE cColor;
+
+  asm {
+    push si
+    mov  ax,pARGy
+    mov  bx,pARGx
+    mov  cl,bl
+    push dx
+    mov  dx,80
+    mul  dx
+    pop  dx
+    shr  bx,1
+    shr  bx,1
+    shr  bx,1
+    add  bx,ax
+    and  cl,7
+    xor  cl,7
+    mov  ch,1
+    shl  ch,cl
+    les  si,dword ptr vPointerGraph
+    add  si,bx
+    xor  bl,bl
+    mov  dx,3CEh
+    mov  ax,304h
+    }
+getpixelloop:
+  asm {
+    out  dx,ax
+    mov  bh,es:[si]
+    and  bh,ch
+    neg  bh
+    rol  bx,1
+    dec  ah
+    jge  getpixelloop
+    pop  si
+    }
+  cColor = _BL;
+  return( cColor );
+  }
+
+
+HIDE void _fastSetPixel( WORD pARGx, WORD pARGy, BYTE pARGn )
+  {
+  asm {
+    mov  cx, pARGx
+    and  cl, 07h
+    xor  cl, 07h
+    add  cl, 08h
+    mov  ax, 0001h
+    shl  ax, cl
+    add  ax, 0008h
+    mov  dx, 3CEh
+    out  dx, ax
+    mov  ax, 205h
+    out  dx, ax
+    mov  cx, pARGx
+    shr  cx, 1
+    shr  cx, 1
+    shr  cx, 1
+    mov  ax, pARGy
+    mov  dx, 0050h
+    imul dx
+    add  cx, ax
+    les  bx, dword ptr vPointerGraph
+    mov  bx, cx
+    mov  al, es:[bx]
+    mov  al, pARGn
+    mov  es:[bx], al
+    mov  ax, 0FF08h
+    mov  dx, 3CEh
+    out  dx, ax
+    mov  ax, 0005h
+    out  dx, ax
+    mov  ax, 0003h
+    out  dx, ax
+    mov  ax, 0001h
+    out  dx, ax
+    }
+  }
+
+
+HIDE void _fastLine( WORD x1, WORD y1, WORD x2, WORD y2, BYTE nColor )
+  {
+  INDEX nInd;
+  int d, x, y;
+  int ax, ay, sx, sy, dx, dy;
+
+  if ( x1 == x2 )
+    {
+    if ( y1 < y2 )
+      for ( nInd = y1; nInd <= y2; nInd ++ )
+        _fastSetPixel( x1, nInd, nColor );
+    else
+      for ( nInd = y2; nInd <= y1; nInd ++ )
+        _fastSetPixel( x1, nInd, nColor );
+    }
+  else
+    {
+    if ( y1 == y2 )
+      {
+      if ( x1 < x2 )
+        for ( nInd = x1; nInd <= x2; nInd ++ )
+          _fastSetPixel( nInd, y1, nColor );
+      else
+        for ( nInd = x2; nInd <= x1; nInd ++ )
+          _fastSetPixel( nInd, y1, nColor );
+      }
+    else
+      {
+      dx = x2-x1;  ax = abs(dx)<<1;  sx = SGN(dx);
+      dy = y2-y1;  ay = abs(dy)<<1;  sy = SGN(dy);
+      x = x1;
+      y = y1;
+      if ( ax > ay )
+        {
+        d = ay-(ax>>1);
+        for (;;)
+          {
+          _fastSetPixel( x, y, nColor );
+          if (x==x2)
+            return;
+          if (d>=0)
+            {
+            y += sy;
+            d -= ax;
+            }
+          x += sx;
+          d += ay;
+          }
+        }
+      else
+        {
+        d = ax-(ay>>1);
+        for (;;)
+          {
+          _fastSetPixel( x, y, nColor );
+          if (y==y2)
+            return;
+          if (d>=0)
+            {
+            x += sx;
+            d -= ay;
+            }
+          y += sy;
+          d += ax;
+          }
+        }
+      }
+    }
+  }
+
+
+HIDE void _fastDispChar( BYTE nChar, WORD nX, WORD nY, WORD nFore, WORD nBack )
+  {
+  BYTE   nByte;
+  BYTE   cChar;
+  WORD   nAux;
+  LPBYTE cPointer = vGetPointerFont( TRUE );
+
+  for ( nByte = 0; nByte < 16; nByte++ )
+    {
+    cChar = *( cPointer + nChar * 16 + nByte );
+    nAux  = nY + nByte;
+    _fastSetPixel( nX + 7, nAux, ( ( cChar &   1 ) ? nFore : nBack ) );
+    _fastSetPixel( nX + 6, nAux, ( ( cChar &   2 ) ? nFore : nBack ) );
+    _fastSetPixel( nX + 5, nAux, ( ( cChar &   4 ) ? nFore : nBack ) );
+    _fastSetPixel( nX + 4, nAux, ( ( cChar &   8 ) ? nFore : nBack ) );
+    _fastSetPixel( nX + 3, nAux, ( ( cChar &  16 ) ? nFore : nBack ) );
+    _fastSetPixel( nX + 2, nAux, ( ( cChar &  32 ) ? nFore : nBack ) );
+    _fastSetPixel( nX + 1, nAux, ( ( cChar &  64 ) ? nFore : nBack ) );
+    _fastSetPixel( nX,     nAux, ( ( cChar & 128 ) ? nFore : nBack ) );
+    }
+  }
+
+
+HIDE void _fastDispStr( LPBYTE cMensaje, BYTE nLen, WORD nX, WORD nY, WORD nSepara, BYTE nColor1, BYTE nColor2 )
+  {
+  INDEX nInd;
+
+  nSepara = ( ( nSepara == 0 ) ? 8 : nSepara );
+  for ( nInd = 0; nInd < nLen; nInd++ )
+    _fastDispChar( cMensaje[ nInd ], nX + nInd * nSepara, nY, nColor1, nColor2 );
+  }
+
+
+HIDE void Set4Pixels( int x, int y, int xc, int yc, int n )
+  {
+  if( x != 0 )
+    {
+    _fastSetPixel( xc + x, yc + y, n );
+    _fastSetPixel( xc - x, yc + y, n );
+    if( y != 0 )
+      {
+      _fastSetPixel( xc + x, yc - y, n );
+      _fastSetPixel( xc - x, yc - y, n );
+      }
+    }
+  else
+    {
+    _fastSetPixel( xc, yc + y, n );
+    if( y != 0 )
+      _fastSetPixel( xc, yc - y, n );
+    }
+  }
+
+
+HIDE void _fastEllipse( WORD xc, WORD yc, WORD a0, WORD b0, WORD n )
+  {
+  int x = 0;
+  int y = b0;
+
+  long a = a0;
+  long b = b0;
+
+  long Asquared    = _fastMul( a, a );
+  long TwoAsquared = _fastMul( 2, Asquared );
+  long Bsquared    = _fastMul( b, b );
+  long TwoBsquared = _fastMul( 2, Bsquared );
+  long d;
+  long dx, dy;
+
+  d = Bsquared - _fastMul( Asquared, b ) + _fastDiv( Asquared, 4L );
+  dx = 0;
+  dy = _fastMul( TwoAsquared, b );
+  while( dx < dy )
+    {
+    Set4Pixels( x, y, xc, yc, n );
+    if( d > 0L )
+      {
+      --y;
+      dy -= TwoAsquared;
+      d  -= dy;
+      }
+    ++x;
+    dx += TwoBsquared;
+    d  += Bsquared + dx;
+    }
+  d += _fastDiv( ( _fastMul( 3L, _fastDiv( ( Asquared - Bsquared ), 2L ) ) - (dx+dy) ), 2L );
+  while( y >= 0 )
+    {
+    Set4Pixels( x, y, xc, yc, n );
+    if( d < 0L )
+      {
+      ++x;
+      dx += TwoBsquared;
+      d  += dx;
+      }
+    --y;
+    dy -= TwoAsquared;
+    d += Asquared - dy;
+    }
+  }
+
+
+HIDE void _fastFill( WORD nX1, WORD nY1, WORD nX2, WORD nY2, BYTE nColor )
+  {
+  INDEX nInd;
+  WORD  nDifer = nY2 - nY1 + 2;
+
+  for ( nInd = nX1; nInd <= nX2; nInd++ )
+    {
+    asm {
+      mov  cx, nInd
+      and  cl, 07h
+      xor  cl, 07h
+      add  cl, 08h
+      mov  ax, 0001h
+      shl  ax, cl
+      add  ax, 0008h
+      mov  dx, 3CEh
+      out  dx, ax
+      mov  ax, 205h
+      out  dx, ax
+      mov  cx, nInd
+      shr  cx, 1
+      shr  cx, 1
+      shr  cx, 1
+      mov  ax, nY1
+      mov  dx, 0050h
+      imul dx
+      add  cx, ax
+      les  bx, dword ptr vPointerGraph
+      mov  bx, cx
+      mov  cx, nDifer
+      }
+fillsalto:
+    asm {
+      mov  al, es:[bx]
+      mov  al, nColor
+      mov  es:[bx], al
+      add  bx, 80
+      loop fillsalto
+      mov  ax, 0FF08h
+      mov  dx, 3CEh
+      out  dx, ax
+      mov  ax, 0005h
+      out  dx, ax
+      mov  ax, 0003h
+      out  dx, ax
+      mov  ax, 0001h
+      out  dx, ax
+      }
+    }
+  }
+
+
+HIDE void _fastBox( WORD nX1, WORD nY1, WORD nX2, WORD nY2, WORD nColor )
+  {
+  _fastLine( nX1, nY1, nX2, nY1, nColor );
+  _fastLine( nX1, nY2, nX2, nY2, nColor );
+  _fastLine( nX1, nY1, nX1, nY2, nColor );
+  _fastLine( nX2, nY1, nX2, nY2, nColor );
+  }
+
+
+
+CLIPPER fgSetPixel()
+  {
+  _fastSetPixel( _parni( 1 ), _parni( 2 ), _parni( 3 ) );
+  }
+
+
+CLIPPER fgGetPixel()
+  {
+  _retni( _fastGetPixel( _parni( 1 ), _parni( 2 ) ) );
+  }
+
+
+CLIPPER fgLine()
+  {
+  _fastLine( _parni( 1 ), _parni( 2 ), _parni( 3 ), _parni( 4 ), _parni( 5 ) );
+  }
+
+
+CLIPPER fgEllipse()
+  {
+  _fastEllipse( _parni( 1 ), _parni( 2 ), _parni( 3 ), _parni( 4 ), _parni( 5 ) );
+  }
+
+
+CLIPPER fgCircle()
+  {
+  _fastEllipse( _parni( 1 ), _parni( 2 ), _parni( 3 ), _parni( 3 ), _parni( 4 ) );
+  }
+
+
+CLIPPER DispChar()
+  {
+  _fastDispChar( _parni( 1 ), _parni( 2 ), _parni( 3 ), _parni( 4 ), _parni( 5 ) );
+  }
+
+
+CLIPPER DispStr()
+  {
+  _fastDispStr( (LPBYTE)_parc( 1 ), _parclen( 1 ), _parni( 2 ), _parni( 3 ), _parni( 6 ), _parni( 4 ), _parni( 5 ) );
+  }
+
+
+CLIPPER fgBox()
+  {
+  _fastBox( _parni( 1 ), _parni( 2 ), _parni( 3 ), _parni( 4 ), _parni( 5 ) );
+  }
+
+
+CLIPPER fgFill()
+  {
+  _fastFill( _parni( 1 ), _parni( 2 ), _parni( 3 ), _parni( 4 ), _parni( 5 ) );
+  }
+
+
+CLIPPER fgCls()
+  {
+  BYTE nColor = _parni( 1 );
+  BYTE nX1    = _parni( 2 );
+  BYTE nY1    = _parni( 3 );
+  BYTE nX2    = ( _parni( 4 ) == 0 ) ? 79 : _parni( 4 );
+  BYTE nY2    = ( _parni( 5 ) == 0 ) ? 29 : _parni( 5 );
+
+  _CH = nY1;
+  _CL = nX1;
+  _DH = nY2;
+  _DL = nX2;
+  _BH = nColor;
+  _AH = 6;
+  _AL = 0;
+  geninterrupt( INT_VIDEO );
+  }
+
+
+CLIPPER Legend()
+  {
+  WORD  nX     = _parni( 1 );
+  WORD  nY     = _parni( 2 );
+  BYTE  nTam   = _parni( 3 );
+  BYTE  nColor = _parni( 4 );
+
+  _fastFill( nX, nY, nX + nTam, nY + nTam, nColor );
+  _fastDispStr( (LPBYTE)_parc( 5 ), _parclen( 5 ), nX + nTam + 4, nY - ( nTam - 16 ) / 2, 8, 15, 0 );
+  }
+
+
+HIDE void DrawBar0( WORD nX, WORD nY, WORD nAlto, WORD nAncho, WORD nSombra, WORD nColor, WORD nShadow, WORD nC1, WORD nC2 )
+  {
+  INDEX nInd;
+
+  _fastFill( nX, nY - nAlto, nX + nAncho, nY, nColor );
+  for ( nInd = 1; nInd <= nSombra; nInd++ )
+    {
+    _fastLine( nX + nAncho + nInd, nY - nInd, nX + nAncho + nInd, nY - nAlto - nInd, nShadow );
+    _fastLine( nX + nInd, nY - nAlto - nInd, nX + nAncho + nInd, nY - nAlto - nInd, nShadow );
+    }
+  _fastLine( nX + nAncho, nY, nX + nAncho, nY - nAlto, nC2 );
+  _fastLine( nX, nY, nX, nY - nAlto, nC1 );
+  _fastLine( nX, nY, nX + nAncho, nY, nC1 );
+  _fastLine( nX, nY - nAlto, nX + nAncho, nY - nAlto, nC2 );
+  _fastLine( nX + nSombra, nY - nAlto - nSombra, nX + nAncho + nSombra, nY - nAlto - nSombra, nC2 );
+  _fastLine( nX + nAncho + nSombra, nY - nSombra, nX + nAncho + nSombra, nY - nAlto - nSombra, nC2 );
+  _fastLine( nX, nY - nAlto, nX + nSombra, nY - nAlto - nSombra, nC2 );
+  _fastLine( nX + nAncho, nY - nAlto, nX + nAncho + nSombra, nY - nAlto - nSombra, nC2 );
+  _fastLine( nX + nAncho, nY, nX + nAncho + nSombra, nY - nSombra, nC2 );
+  }
+
+
+HIDE void DrawBar1( WORD nX, WORD nY, WORD nAlto, WORD nAncho, WORD nSombra, WORD nColor, WORD nShadow, WORD nC1, WORD nC2 )
+  {
+  INDEX nInd;
+  WORD  nX2;
+  WORD  nY2;
+
+  nX2 = nX + nAncho / 2 + nSombra / 2;
+  nY2 = nY - nAlto - nSombra / 2;
+  for ( nInd = 1; nInd <= nAncho; nInd++ )
+    _fastLine( nX + nInd, nY, nX2, nY2, nColor );
+  for ( nInd = 1; nInd <= nSombra; nInd++ )
+    {
+    _fastLine( nX + nAncho + nInd, nY - nInd,     nX2, nY2, nShadow );
+    _fastLine( nX + nAncho + nInd, nY - nInd + 1, nX2, nY2, nShadow );
+     }
+  _fastLine( nX,                    nY,           nX + nAncho,               nY,           nC1 );
+  _fastLine( nX,                    nY,           nX2,                       nY2,          nC1 );
+  _fastLine( nX + nAncho,           nY,           nX2,                       nY2,          nC1 );
+  _fastLine( nX + nAncho + nSombra, nY - nSombra, nX2,                       nY2,          nC2 );
+  _fastLine( nX + nAncho + 1,       nY,           nX + nAncho + nSombra + 1, nY - nSombra, nC2 );
+  }
+
+
+HIDE void DrawBar2( WORD nX, WORD nY, WORD nAlto, WORD nAncho, WORD nSombra, WORD nColor, WORD nShadow, WORD nC1, WORD nC2 )
+  {
+  INDEX nInd;
+  WORD  nX2;
+
+  nX2 = nX + nAncho / 2 + nSombra / 2;
+  for ( nInd = 1; nInd <= nAncho; nInd++ )
+    _fastLine( nX + nInd, nY - nAlto, nX2, nY, nColor );
+  for ( nInd = 1; nInd <= nSombra; nInd++ )
+    {
+    _fastLine( nX + nInd,          nY - nAlto - nInd,     nX + nAncho + nInd, nY - nAlto - nInd, nShadow );
+    _fastLine( nX + nAncho + nInd, nY - nAlto - nInd,     nX2,                nY,                nShadow );
+    _fastLine( nX + nAncho + nInd, nY - nAlto - nInd + 1, nX2,                nY,                nShadow );
+    }
+  _fastLine( nX,                    nY - nAlto,           nX + nAncho,           nY - nAlto,           nC2 );
+  _fastLine( nX + nSombra,          nY - nAlto - nSombra, nX + nAncho + nSombra, nY - nAlto - nSombra, nC2 );
+  _fastLine( nX,                    nY - nAlto,           nX + nSombra,          nY - nAlto - nSombra, nC2 );
+  _fastLine( nX + nAncho,           nY - nAlto,           nX + nAncho + nSombra, nY - nAlto - nSombra, nC2 );
+  _fastLine( nX,                    nY - nAlto,           nX2,                   nY,                   nC1 );
+  _fastLine( nX + nAncho,           nY - nAlto,           nX2,                   nY,                   nC2 );
+  _fastLine( nX + nAncho + nSombra, nY - nAlto - nSombra, nX2,                   nY,                   nC2 );
+  }
+
+
+HIDE void DrawBar3( WORD nX, WORD nY, WORD nAlto, WORD nAncho, WORD nSombra, WORD nColor, WORD nShadow, WORD nC1, WORD nC2 )
+  {
+  INDEX nInd;
+
+  _fastEllipse( nX + nAncho / 2, nY, nAncho / 2, nSombra / 2, nC1 );
+  for ( nInd = 1; nInd <= nAlto; nInd++ )
+    _fastEllipse( nX + nAncho / 2, nY - nInd, nAncho / 2, nSombra / 2, nColor );
+  _fastLine( nX,          nY, nX,          nY - nAlto, nC1 );
+  _fastLine( nX + nAncho, nY, nX + nAncho, nY - nAlto, nC1 );
+  for ( nInd = 0; nInd <= nAncho / 2; nInd++ )
+    _fastEllipse( nX + nAncho / 2, nY - nAlto, nInd, nSombra / 2, nShadow );
+  _fastEllipse( nX + nAncho / 2, nY - nAlto, nAncho / 2, nSombra / 2, nC2 );
+  }
+
+
+CLIPPER DrawBar()
+  {
+  WORD  nX      = _parni( 1 );
+  WORD  nY      = _parni( 2 );
+  WORD  nAlto   = _parni( 3 );
+  WORD  nAncho  = _parni( 4 );
+  WORD  nSombra = _parni( 5 );
+  WORD  nColor  = _parni( 6 );
+  WORD  nShadow = _parni( 7 );
+  WORD  lLine   = _parl( 8 );
+  WORD  nC1     = ( ( lLine ) ? 0 : nColor  );
+  WORD  nC2     = ( ( lLine ) ? 0 : nShadow );
+  WORD  nMode   = _parni( 9 );
+
+  switch ( nMode )
+    {
+    case 3 :
+      DrawBar3( nX, nY, nAlto, nAncho, nSombra, nColor, nShadow, nC1, nC2 );
+      break;
+    case 2 :
+      DrawBar2( nX, nY, nAlto, nAncho, nSombra, nColor, nShadow, nC1, nC2 );
+      break;
+    case 1 :
+      DrawBar1( nX, nY, nAlto, nAncho, nSombra, nColor, nShadow, nC1, nC2 );
+      break;
+    default :
+      DrawBar0( nX, nY, nAlto, nAncho, nSombra, nColor, nShadow, nC1, nC2 );
+    }
+  }
+
+
+CLIPPER BackG()
+  {
+  LPBYTE cTitulo = (LPBYTE)_parc( 1 );
+  WORD   nLen    = _parclen( 1 );
+  WORD   nAux    = ( nLen * 10 ) / 2;
+  WORD   nSombra = _parni( 2 );
+  INDEX  nInd;
+
+#define nX          90
+#define nY          320
+#define nAlto       270
+#define nAncho      549
+#define nColor      11
+#define nColSombra  3
+
+  _fastForce();
+  _fastFill( 310 - nAux, 12, 329 + nAux, 30, 1 );
+  _fastBox( 309 - nAux, 11, 330 + nAux, 31, 9 );
+  _fastDispStr( cTitulo, nLen, 320 - nAux, 14, 10, 14, 1 );
+  _fastFill( nX, nY - nAlto, nX + nAncho, nY - 1, nColor );
+  for( nInd = 1; nInd <= nSombra; nInd++ )
+    {
+    _fastLine ( nX - nInd, nY + nInd, nX + nAncho - nInd, nY + nInd, nColSombra );
+    _fastLine ( nX - nInd, nY - nAlto + nInd, nX - nInd, nY + nInd, nColSombra );
+    }
+  for( nInd = 0; nInd <= 4; nInd++ )
+    {
+    _fastLine ( nX, nY - nInd * 62, nX + nAncho,  nY - nInd * 62, 0 );
+    _fastLine ( nX, nY - nInd * 62, nX - nSombra, nY - nInd * 62 + nSombra, 0 );
+    }
+  }
+
+
+CLIPPER fgBox3D()
+  {
+  WORD nX1     = _parni( 1 );
+  WORD nY1     = _parni( 2 );
+  WORD nX2     = _parni( 3 );
+  WORD nY2     = _parni( 4 );
+  WORD nColor1 = _parni( 5 );
+  WORD nColor2 = _parni( 6 );
+
+  _fastLine( nX1, nY1, nX1, nY2, nColor1 );
+  _fastLine( nX1, nY1, nX2, nY1, nColor1 );
+  _fastLine( nX1, nY2, nX2, nY2, nColor2 );
+  _fastLine( nX2, nY1, nX2, nY2, nColor2 );
+  }
+
+
+CLIPPER fgFrame()
+  {
+  WORD nX1     = _parni( 1 );
+  WORD nY1     = _parni( 2 );
+  WORD nX2     = _parni( 3 );
+  WORD nY2     = _parni( 4 );
+  WORD nColor1 = _parni( 5 );
+  WORD nColor2 = _parni( 6 );
+
+  _fastBox( nX1,     nY1,     nX2,     nY2,     nColor2 );
+  _fastBox( nX1 - 1, nY1 - 1, nX2 - 1, nY2 - 1, nColor1 );
+  }
+
+
+CLIPPER fgFrame3D()
+  {
+  WORD nX1     = _parni( 1 );
+  WORD nY1     = _parni( 2 );
+  WORD nX2     = _parni( 3 );
+  WORD nY2     = _parni( 4 );
+  WORD nColor1 = _parni( 5 );
+  WORD nColor2 = _parni( 6 );
+
+  _fastLine( nX1,     nY1,     nX2 - 1, nY1,     nColor1 );
+  _fastLine( nX1,     nY1,     nX1,     nY2,     nColor1 );
+  _fastLine( nX2,     nY1,     nX2,     nY2 - 1, nColor2 );
+  _fastLine( nX1,     nY2,     nX2,     nY2,     nColor2 );
+  _fastLine( nX1 + 5, nY1 + 5, nX2 - 6, nY1 + 5, nColor2 );
+  _fastLine( nX1 + 5, nY1 + 5, nX1 + 5, nY2 - 5, nColor2 );
+  _fastLine( nX2 - 5, nY1 + 5, nX2 - 5, nY2 - 5, nColor1 );
+  _fastLine( nX1 + 5, nY2 - 5, nX2 - 5, nY2 - 5, nColor1 );
+  }
+
+
+CLIPPER fgWinBox()
+  {
+  WORD nX1       = _parni( 1 ) + 5;
+  WORD nY1       = _parni( 2 ) + 5;
+  WORD nX2       = _parni( 3 ) - 5;
+  WORD nY2       = _parni( 4 ) - 5;
+  WORD nBoxColor = _parni( 5 );
+
+  _fastFill( nX1 + 1, nY1 + 1, nX2 - 1, nY2 - 1, nBoxColor );
+  _fastBox(  nX1 - 5, nY1 - 5, nX2 + 5, nY2 + 5,  8 );
+  _fastBox(  nX1 - 4, nY1 - 4, nX2 + 4, nY2 + 4,  7 );
+  _fastBox(  nX1 - 3, nY1 - 3, nX2 + 3, nY2 + 3, 15 );
+  _fastBox(  nX1 - 2, nY1 - 2, nX2 + 2, nY2 + 2, 15 );
+  _fastBox(  nX1 - 1, nY1 - 1, nX2 + 1, nY2 + 1,  7 );
+  _fastBox(  nX1,     nY1,     nX2,     nY2,      8 );
+  }
+
+

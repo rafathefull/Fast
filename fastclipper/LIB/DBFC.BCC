@@ -1,0 +1,40 @@
+/* 
+------------------------------------------------------------------------
+FASTlib for Clipper, including all source code, examples and any other 
+file has been donated to Open Source community
+
+Manu Roibal. Bilbao, May 7 2011
+
+------------------------------------------------------------------------
+Please, contact me at	manuroibal@gmail.com
+Follow me at Twitter	@manuroibal on Twitter
+My Linkedin profile	www.linkedin.com/manuroibal
+
+Or visit my web site at	www.tonsofit.com
+------------------------------------------------------------------------
+*/
+
+
+#pragma inline
+
+#include "\libs\clipapi\clipapi.h"
+
+
+CLIPPER HaveDbt()
+  {
+  int   nHandle;
+  BYTE  cBuffer;
+  LPSTR cFichero;
+
+  _fastForce();
+  if ( ( PCOUNT == 1 ) && ( ISCHAR(1) ) )
+    {
+    cFichero = _parc( 1 );
+    nHandle = _topen( cFichero, 64 );
+    if ( nHandle > 4 )
+      _tread( nHandle, &cBuffer, 1 );
+    _tclose( nHandle );
+    _retl( ( cBuffer == 131 ) );
+    }
+  }
+

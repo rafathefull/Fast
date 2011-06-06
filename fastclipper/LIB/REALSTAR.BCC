@@ -1,0 +1,166 @@
+/* 
+------------------------------------------------------------------------
+FASTlib for Clipper, including all source code, examples and any other 
+file has been donated to Open Source community
+
+Manu Roibal. Bilbao, May 7 2011
+
+------------------------------------------------------------------------
+Please, contact me at	manuroibal@gmail.com
+Follow me at Twitter	@manuroibal on Twitter
+My Linkedin profile	www.linkedin.com/manuroibal
+
+Or visit my web site at	www.tonsofit.com
+------------------------------------------------------------------------
+*/
+
+
+#include "\libs\clipapi\clipapi.h"
+#include "\clip\bc\include\dos.h"
+
+#define POINTS 500
+
+typedef struct
+  {
+  int x, y, z;
+  WORD adi;
+  } POINT_STRUCT;
+
+
+HIDE BOOL starInitApp( void );
+HIDE void starEndApp( void );
+HIDE void starDoIt( POINT_STRUCT p[], WORD nPoints, WORD nIncremento );
+HIDE WORD starDrawIt( int, int, int );
+HIDE void starDelPoint( int );
+
+
+HIDE POINT_STRUCT sPoints[ POINTS ];
+HIDE WORD         nOldVideoMode;
+HIDE int          nOrgX = 159;
+HIDE int          nOrgY = 99;
+HIDE int          nDT   = 256;
+
+
+
+CLIPPER RealStars()
+  {
+  int  nSpeed = _parni( 1 );
+  WORD nCursor;
+
+  _gtGetCursor( & nCursor );
+  _gtSetCursor( 1 );
+  if ( nSpeed < 1 )
+    nSpeed = 3;
+  if ( starInitApp() )
+    {
+    starDoIt( sPoints, POINTS, nSpeed );
+    starEndApp();
+    }
+  _gtSetCursor( nCursor );
+  }
+
+
+HIDE BOOL starInitApp( void )
+  {
+  INDEX nInd;
+
+  nOldVideoMode = _fastVideoMode( 0x13 );
+  for( nInd = 0; nInd < POINTS; nInd++ )
+    {
+    sPoints[ nInd ].x = _fastRand( 160 ) * ( _fastRand( 2 ) == 1 ? -1 : 1 );
+    sPoints[ nInd ].y = _fastRand( 100 ) * ( _fastRand( 2 ) == 1 ? -1 : 1 );
+    sPoints[ nInd ].z = _fastRand( 200 ) * ( _fastRand( 2 ) == 1 ? -1 : 1 );
+    }
+  return( TRUE );
+  }
+
+
+HIDE void starEndApp( void )
+  {
+  _fastProcKey();
+  _fastVideoMode( nOldVideoMode );
+  }
+
+
+HIDE WORD starDrawIt( int nX, int nY, int nColor )
+  {
+  int nRet;
+
+  if ( nX < 0 || nX > 319 || nY < 0 || nY > 199)
+     return( -1 );
+  asm {
+     les    di, dword ptr vPointerGraph
+     mov    ax,nY
+	 mov	bh,al
+	 shl	ax,6
+	 add	ah,bh
+	 mov	di,ax
+     add    di,nX
+     mov    ax,nColor
+     mov    nRet,di
+	 stosb
+	 }
+  return( nRet );
+  }
+
+
+HIDE void starDelPoint( int nAdi )
+  {
+  asm {
+    les    di, dword ptr vPointerGraph
+    add    di, nAdi
+    mov    ax,0
+    stosb
+    }
+  }
+
+
+HIDE void starConic( int nX, int nY, int nZ, int *xp, int *yp )
+  {
+  int nRes = nDT + nZ;
+
+  if ( nRes <= 0 )
+    {
+    *xp = *yp = 0;
+    return;
+    }
+  *xp = (int)( nOrgX + _fastDiv( _fastShl( nX, 8 ), nRes ) );
+  *yp = (int)( nOrgY - _fastDiv( _fastShl( nY, 8 ), nRes ) );
+  }
+
+
+HIDE void starDoIt( POINT_STRUCT p[], WORD nPoints, WORD nIncremento )
+  {
+  int          nInd,nX,nY;
+  WORD         nAdi;
+  POINT_STRUCT sAux;
+
+  do
+    {
+    for( nInd = 0; nInd < nPoints; nInd++ )
+      {
+      _bcopy( (LPBYTE)( & sAux ), (LPBYTE)( &( p[ nInd ] ) ), sizeof( POINT_STRUCT ) );
+      starConic( sAux.x, sAux.y, sAux.z, & nX, & nY );
+      p[ nInd ].adi = starDrawIt( nX, nY, 31-( ( sAux.z + nDT ) >> 5 ) );
+      }
+    _fastRetrace();
+    for( nInd = 0; nInd < nPoints; nInd++ )
+      {
+      nAdi = p[ nInd ].adi;
+      starDelPoint( nAdi );
+      }
+    for( nInd = 0; nInd < nPoints; nInd++ )
+      {
+      p[ nInd ].z -= nIncremento;
+      if ( p[ nInd].z + nDT <= 0 )
+        {
+        p[ nInd ].z = _fastRand( 200 );
+        p[ nInd ].x = _fastRand( 160 ) * ( _fastRand( 2 ) == 1 ? -1 : 1 );
+        p[ nInd ].y = _fastRand( 100 ) * ( _fastRand( 2 ) == 1 ? -1 : 1 );
+        }
+      }
+    } while ( ! _fastKey() );
+  }
+
+
+

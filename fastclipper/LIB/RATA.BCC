@@ -1,0 +1,244 @@
+/* 
+------------------------------------------------------------------------
+FASTlib for Clipper, including all source code, examples and any other 
+file has been donated to Open Source community
+
+Manu Roibal. Bilbao, May 7 2011
+
+------------------------------------------------------------------------
+Please, contact me at	manuroibal@gmail.com
+Follow me at Twitter	@manuroibal on Twitter
+My Linkedin profile	www.linkedin.com/manuroibal
+
+Or visit my web site at	www.tonsofit.com
+------------------------------------------------------------------------
+*/
+
+
+#pragma inline
+
+#include "\libs\clipapi\clipapi.h"
+#include "\libs\clipapi\linker.h"
+#include "\clip\bc\include\dos.h"
+
+
+HIDE WORD rBtn( WORD );
+
+HIDE WORD _fastIsMouse = 0;
+HIDE WORD _fastButtons = 0;
+
+
+CLIPPER rIsMouse()
+  {
+  _fastForce();
+  if ( _fastIsMouse != 0xFFFF )
+    {
+    _AX = 0;
+    _BX = 0;
+    geninterrupt( INT_MOUSE );
+    _fastIsMouse = _AX;
+    _fastButtons = _BX;
+    }
+  _retl( ( _fastIsMouse == 0xFFFF ) );
+  }
+
+
+CLIPPER rCentre()
+  {
+  _retl( rBtn( 4 ) );
+  }
+
+
+CLIPPER rLeft()
+  {
+  _retl( rBtn( 1 ) );
+  }
+
+
+CLIPPER rRight()
+  {
+  _retl( rBtn( 2 ) );
+  }
+
+
+CLIPPER rSetArea()
+  {
+  WORD nAux1, nAux2;
+  WORD nMode = _fastVideoMode( 0 );
+
+  nAux1 = _parni( 2 ) * ( ( nMode == 3 || nMode == 7 ) ? 8 : 1 );
+  nAux2 = _parni( 4 ) * ( ( nMode == 3 || nMode == 7 ) ? 8 : 1 );
+  _CX = nAux1;
+  _DX = nAux2;
+  _AX = 0x7;
+  geninterrupt( INT_MOUSE );
+  nAux1 = _parni( 1 ) * ( ( nMode == 3 || nMode == 7 ) ? 8 : 1 );
+  nAux2 = _parni( 3 ) * ( ( nMode == 3 || nMode == 7 ) ? 8 : 1 );
+  _CX = nAux1;
+  _DX = nAux2;
+  _AX = 0x8;
+  geninterrupt( INT_MOUSE );
+  }
+
+
+CLIPPER rButtons()
+  {
+  _retni( _fastButtons );
+  }
+
+
+CLIPPER rClick()
+  {
+  _retl( rBtn( 1 ) || rBtn( 2 ) || rBtn( 4 ) );
+  }
+
+
+CLIPPER rCursorOff()
+  {
+  _AX = 0x2;
+  geninterrupt( INT_MOUSE );
+  }
+
+
+CLIPPER rCursorOn()
+  {
+  _AX = 0x1;
+  geninterrupt( INT_MOUSE );
+  }
+
+
+CLIPPER rHardCur()
+  {
+  _BX = 0x1;
+  _AX = 0xA;
+  geninterrupt( INT_MOUSE );
+  }
+
+
+CLIPPER rSoftCur()
+  {
+  BYTE cBuffer[ 16 ];
+
+  cBuffer[  0 ] = 128;
+  cBuffer[  1 ] = 192;
+  cBuffer[  2 ] = 224;
+  cBuffer[  3 ] = 240;
+  cBuffer[  4 ] = 248;
+  cBuffer[  5 ] = 252;
+  cBuffer[  6 ] = 254;
+  cBuffer[  7 ] = 255;
+  cBuffer[  8 ] = 252;
+  cBuffer[  9 ] = 220;
+  cBuffer[ 10 ] = 158;
+  cBuffer[ 11 ] = 016;
+  cBuffer[ 12 ] = 007;
+  cBuffer[ 13 ] = 007;
+  cBuffer[ 14 ] = 000;
+  cBuffer[ 15 ] = 000;
+  _fastSetFont( cBuffer, 1, 255, FALSE );
+  _CX = 0xFF00;
+  _DX = 0x00FF;
+  _BX = 0x0;
+  _AX = 0xA;
+  geninterrupt( INT_MOUSE );
+  }
+
+
+CLIPPER rSetPos()
+  {
+  WORD nAux1, nAux2;
+  WORD nMode = _fastVideoMode( 0 );
+
+  nAux1 = _parni( 1 ) * ( ( nMode == 3 || nMode == 7 ) ? 8 : 1 );
+  nAux2 = _parni( 2 ) * ( ( nMode == 3 || nMode == 7 ) ? 8 : 1 );
+  _DX = nAux1;
+  _CX = nAux2;
+  _AX = 0x4;
+  geninterrupt( INT_MOUSE );
+  }
+
+
+CLIPPER rReset()
+  {
+  _BX = 0x0;
+  _AX = 0x0;
+  geninterrupt( INT_MOUSE );
+  }
+
+
+CLIPPER rSens()
+  {
+  _CX = _parni( 1 );
+  _DX = _parni( 2 );
+  _AX = 0x0F;
+  geninterrupt( INT_MOUSE );
+  }
+
+
+CLIPPER rGetPosX()
+  {
+  WORD nAux;
+  WORD nMode = _fastVideoMode( 0 );
+
+  _AX = 0x3;
+  geninterrupt( INT_MOUSE );
+  nAux = _CX;
+  _retni( nAux / ( ( nMode == 3 || nMode == 7 ) ? 8 : 1 ) );
+  }
+
+
+CLIPPER rGetPosY()
+  {
+  WORD nAux;
+  WORD nMode = _fastVideoMode( 0 );
+
+  _AX = 0x3;
+  geninterrupt( INT_MOUSE );
+  nAux = _DX;
+  _retni( nAux / ( ( nMode == 3 || nMode == 7 ) ? 8 : 1 ) );
+  }
+
+
+CLIPPER rInArea()
+  {
+  WORD nPosX, nPosY;
+  WORD nMode = _fastVideoMode( 0 );
+
+  _AX = 0x3;
+  geninterrupt( INT_MOUSE );
+  nPosX = _CX;
+  nPosY = _DX;
+  nPosX /= ( ( nMode == 3 || nMode == 7 ) ? 8 : 1 );
+  nPosY /= ( ( nMode == 3 || nMode == 7 ) ? 8 : 1 );
+  _retl( ( nPosY >= _parni( 1 ) ) && ( nPosY <= _parni( 3 ) ) &&
+         ( nPosX >= _parni( 2 ) ) && ( nPosX <= _parni( 4 ) ) );
+  }
+
+
+
+HIDE WORD rBtn( WORD nBtn )
+  {
+  _AX = 0x3;
+  geninterrupt( INT_MOUSE );
+  return( ( _BX & nBtn ) != 0 );
+  }
+
+
+CLIPPER rVersion()
+  {
+  EXOREGS sRegs;
+  BYTE    cBuffer[ 5 ];
+
+  _bset( cBuffer, 32, 5 );
+  sRegs.ax = 0x24;
+  ExoRMInterrupt( INT_MOUSE, & sRegs, & sRegs );
+  _reta( 3 );
+  _fastStrHex( cBuffer + 0, sRegs.bx & 0xFF );
+  cBuffer[ 2 ] = '.';
+  _fastStrHex( cBuffer + 3, sRegs.bx >> 8 );
+  _storclen( (LPSTR)cBuffer, 5,       -1, 1 );
+  _storni(   sRegs.cx &  0xFF, -1, 2 );
+  _storni(   sRegs.cx >> 8,    -1, 3 );
+  }
+
+

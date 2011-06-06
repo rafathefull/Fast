@@ -1,0 +1,473 @@
+/* 
+------------------------------------------------------------------------
+FASTlib for Clipper, including all source code, examples and any other 
+file has been donated to Open Source community
+
+Manu Roibal. Bilbao, May 7 2011
+
+------------------------------------------------------------------------
+Please, contact me at	manuroibal@gmail.com
+Follow me at Twitter	@manuroibal on Twitter
+My Linkedin profile	www.linkedin.com/manuroibal
+
+Or visit my web site at	www.tonsofit.com
+------------------------------------------------------------------------
+*/
+
+
+#include "\libs\clipapi\clipapi.h"
+#include "\clip\bc\include\dos.h"
+#include "\libs\clipapi\linker.h"
+
+
+#define FOSSIL_OK 0x1954
+
+typedef struct
+        {
+        WORD   InfoSize;
+        BYTE   MajVer;
+        BYTE   MinVer;
+        LPBYTE Notice;
+        WORD   InSize;
+        WORD   InFree;
+        WORD   OuSize;
+        WORD   OuFree;
+        BYTE   ScrWidth;
+        BYTE   ScrHeight;
+        BYTE   BaudRate;
+        } FOSSIL_INFO;
+
+
+CLIPPER FosParam()
+  {
+  BYTE aBaud[ 8 ] = { 0x2,         // 300
+                      0x3,         // 600
+                      0x4,         // 1200
+                      0x5,         // 2400
+                      0x6,         // 4800
+                      0x7,         // 9600
+                      0x0,         // 19200
+                      0x1 };       // 38400
+/*
+parity:               stop bits:                      character length:
+  0 0  no parity        0  1 stop bit;                   0 0  5 bits
+  1 0  no parity        1  1.5 bits for 5-bit codes,     0 1  6 bits
+  0 1  odd parity       2  for others                    1 0  7 bits
+  1 1  even parity                                       1 1  8 bits
+*/
+  WORD    nPort   = _parni( 1 );
+  BYTE    nBaud   = _parni( 2 );
+  BYTE    nParity = _parni( 3 );
+  BYTE    nStop   = _parni( 4 );
+  BYTE    nLength = _parni( 5 );
+  EXOREGS sRegs;
+
+  _fastForce();
+  sRegs.dx =  nPort;
+  sRegs.ax =  0x00 << 8;
+  sRegs.ax += ( aBaud[ nBaud ] << 5 ) + ( nParity << 3 ) +
+              ( nStop << 2 )          + nLength;
+  ExoRMInterrupt( INT_COMM, & sRegs, & sRegs );
+  _retni( sRegs.ax );
+  }
+
+
+static BOOL SendByte( WORD nPort, BYTE nChar )
+  {
+  EXOREGS sRegs;
+  BYTE    nAH;
+
+  sRegs.dx =  nPort;
+  sRegs.ax =  0x01 << 8;
+  sRegs.ax += nChar;
+  ExoRMInterrupt( INT_COMM, & sRegs, & sRegs );
+  nAH = sRegs.ax >> 8;
+  return( ( ( nAH & 128 ) >> 7 ) == 0 );
+  }
+
+
+static BOOL ReceiveByte( WORD nPort, LPBYTE nChar )
+  {
+  EXOREGS sRegs;
+  BYTE    nAH;
+
+  sRegs.dx =  nPort;
+  sRegs.ax =  0x02 << 8;
+  ExoRMInterrupt( INT_COMM, & sRegs, & sRegs );
+  * nChar = (BYTE)( sRegs.ax & 0xFF );
+  nAH = sRegs.ax >> 8;
+  return( ( ( nAH & 128 ) >> 7 ) == 0 );
+  }
+
+
+CLIPPER FosTxWait()
+  {
+  WORD nPort = _parni( 1 );
+  BYTE nChar = _parni( 2 );
+
+  _retl( SendByte( nPort, nChar ) );
+  }
+
+
+CLIPPER FosTxWaitS()
+  {
+  WORD   nPort   = _parni( 1 );
+  LPBYTE cCadena = (LPBYTE)_parc( 2 );
+  WORD   nInd;
+  BOOL   lEstado = TRUE;
+
+  for ( nInd = 0; ( *( cCadena + nInd ) != '\0' ) && lEstado; ++nInd )
+    {
+    if ( *( cCadena + nInd ) == '|' )
+      lEstado = SendByte( nPort, 13 );
+    else if ( *( cCadena + nInd ) == '~' )
+      _fastWait( 1000 );
+    else
+      lEstado = SendByte( nPort, *( cCadena + nInd ) );
+    }
+  _retl( lEstado );
+  }
+
+
+CLIPPER FosRcWait()
+  {
+  WORD nPort = _parni( 1 );
+  BYTE cChar;
+
+  _retl( ReceiveByte( nPort, & cChar ) );
+  _storni( cChar, 2 );
+  }
+
+
+CLIPPER FosRcWaitS()
+  {
+  WORD   nPort   = _parni( 1 );
+  LPBYTE cCadena = (LPBYTE)_parc( 2 );
+  WORD   nSize   = _parclen( 2 );
+  WORD   nInd;
+  BOOL   lEstado = TRUE;
+  BYTE   cChar   = 0;
+
+  for ( nInd = 0; cChar != '|' && lEstado && nInd < nSize; ++nInd )
+    {
+    lEstado = ReceiveByte( nPort, & cChar );
+    *( cCadena + nInd ) = cChar;
+    }
+  _retl( lEstado );
+  }
+
+
+CLIPPER FosStatusP()
+  {
+  WORD    nPort = _parni( 1 );
+  EXOREGS sRegs;
+
+  sRegs.dx = nPort;
+  sRegs.ax = 0x03 << 8;
+  ExoRMInterrupt( INT_COMM, & sRegs, & sRegs );
+  _retni( sRegs.ax );
+  }
+
+
+CLIPPER FosActive()
+  {
+  WORD    nPort = _parni( 1 );
+  EXOREGS sRegs;
+
+  sRegs.dx = nPort;
+  sRegs.ax = 0x04 << 8;
+  ExoRMInterrupt( INT_COMM, & sRegs, & sRegs );
+  _retl( sRegs.ax == FOSSIL_OK );
+  }
+
+
+CLIPPER FosDeActiv()
+  {
+  WORD    nPort = _parni( 1 );
+  EXOREGS sRegs;
+
+  sRegs.dx = nPort;
+  sRegs.ax = 0x05 << 8;
+  ExoRMInterrupt( INT_COMM, & sRegs, & sRegs );
+  }
+
+
+CLIPPER FosSetDTR()
+  {
+  WORD    nPort = _parni( 1 );
+  BYTE    nDTR  = _parni( 2 );
+  EXOREGS sRegs;
+
+  sRegs.dx =  nPort;
+  sRegs.ax =  0x06 << 8;        // 1 raise DTR (on)
+  sRegs.ax += nDTR;             // 0 lower DTR (off)
+  ExoRMInterrupt( INT_COMM, & sRegs, & sRegs );
+  }
+
+
+CLIPPER FosFlushOu()
+  {
+  WORD    nPort = _parni( 1 );
+  EXOREGS sRegs;
+
+  sRegs.dx = nPort;
+  sRegs.ax = 0x08 << 8;
+  ExoRMInterrupt( INT_COMM, & sRegs, & sRegs );
+  }
+
+
+CLIPPER FosPurgeOu()
+  {
+  WORD    nPort = _parni( 1 );
+  EXOREGS sRegs;
+
+  sRegs.dx = nPort;
+  sRegs.ax = 0x09 << 8;
+  ExoRMInterrupt( INT_COMM, & sRegs, & sRegs );
+  }
+
+
+CLIPPER FosPurgeIn()
+  {
+  WORD    nPort = _parni( 1 );
+  EXOREGS sRegs;
+
+  sRegs.dx = nPort;
+  sRegs.ax = 0x0A << 8;
+  ExoRMInterrupt( INT_COMM, & sRegs, & sRegs );
+  }
+
+
+CLIPPER FosTxNoWai()
+  {
+  WORD    nPort = _parni( 1 );
+  BYTE    nChar = _parni( 2 );
+  EXOREGS sRegs;
+
+  sRegs.dx =  nPort;
+  sRegs.ax =  0x0B << 8;
+  sRegs.ax += nChar;
+  ExoRMInterrupt( INT_COMM, & sRegs, & sRegs );
+  _retl( sRegs.ax == 0x0001 );
+  }
+
+
+CLIPPER FosRcPeek()
+  {
+  WORD    nPort = _parni( 1 );
+  EXOREGS sRegs;
+
+  sRegs.dx = nPort;
+  sRegs.ax = 0x0C << 8;
+  ExoRMInterrupt( INT_COMM, & sRegs, & sRegs );
+  _retni( ( sRegs.ax == 0xFFFF ) ? -1 : sRegs.ax & 0xFF );
+  }
+
+
+CLIPPER FosKeyNoWa()
+  {
+  EXOREGS sRegs;
+
+  sRegs.ax = 0x0D << 8;
+  ExoRMInterrupt( INT_COMM, & sRegs, & sRegs );
+  _retni( sRegs.ax );
+  }
+
+
+CLIPPER FosKeyWait()
+  {
+  EXOREGS sRegs;
+
+  sRegs.ax = 0x0E << 8;
+  ExoRMInterrupt( INT_COMM, & sRegs, & sRegs );
+  _retni( sRegs.ax );
+  }
+
+
+CLIPPER FosFlowCtr()
+  {
+  WORD    nPort = _parni( 1 );
+  BYTE    nFlow = _parni( 2 );
+  EXOREGS sRegs;
+
+  sRegs.dx =  nPort;
+  sRegs.ax =  0x0F << 8;
+  sRegs.ax += nFlow;    // Bit 0 = 1      Enable receiving of Xon/Xoff
+                        // Bit 1 = 1      Enable RTS/CTS flow control
+                        // Bit 2          Reserved (should be zero)
+                        // Bit 3 = 1      Enable transmitting of Xon/Xoff
+  ExoRMInterrupt( INT_COMM, & sRegs, & sRegs );
+  }
+
+
+CLIPPER FosCtrlC()
+  {
+  WORD    nPort    = _parni( 1 );
+  BYTE    nControl = _parni( 2 );
+  EXOREGS sRegs;
+
+  sRegs.dx =  nPort;
+  sRegs.ax =  0x10 << 8;
+  sRegs.ax += nControl;  // Bit 0 Enable/disable Control-C / Control-K checking
+                         // Bit 1 Disable/enable the transmitter
+  ExoRMInterrupt( INT_COMM, & sRegs, & sRegs );
+  _retl( sRegs.ax == 0x0001 );
+  }
+
+
+CLIPPER FosSetCurs()
+  {
+  BYTE    nRow = _parni( 1 );
+  BYTE    nCol = _parni( 2 );
+  EXOREGS sRegs;
+
+  sRegs.dx =  nRow << 8;
+  sRegs.dx += nCol;
+  sRegs.ax =  0x11 << 8;
+  ExoRMInterrupt( INT_COMM, & sRegs, & sRegs );
+  }
+
+
+CLIPPER FosGetCurs()
+  {
+  EXOREGS sRegs;
+
+  sRegs.ax = 0x12 << 8;
+  ExoRMInterrupt( INT_COMM, & sRegs, & sRegs );
+  _reta( 2 );
+  _storni( sRegs.dx >> 8,   -1, 1 );    // Row
+  _storni( sRegs.dx & 0xFF, -1, 2 );    // Col
+  }
+
+
+CLIPPER FosWriteCh()
+  {
+  BYTE    nChar = _parni( 1 );
+  EXOREGS sRegs;
+
+  sRegs.ax =  0x13 << 8;
+  sRegs.ax += nChar;
+  ExoRMInterrupt( INT_COMM, & sRegs, & sRegs );
+  }
+
+
+CLIPPER FosSetDCD()
+  {
+  WORD    nPort  = _parni( 1 );
+  BYTE    nWatch = _parni( 2 );
+  EXOREGS sRegs;
+
+  sRegs.dx =  nPort;
+  sRegs.ax =  0x14 << 8;
+  sRegs.ax += nWatch;     // 01h - Enable watchdog
+                          // 00h - Disable watchdog
+  ExoRMInterrupt( INT_COMM, & sRegs, & sRegs );
+  }
+
+
+CLIPPER FosBIOSCha( void )
+  {
+  BYTE    nChar = _parni( 1 );
+  EXOREGS sRegs;
+
+  sRegs.ax =  0x15 << 8;
+  sRegs.ax += nChar;
+  ExoRMInterrupt( INT_COMM, & sRegs, & sRegs );
+  }
+
+
+CLIPPER FosReboot()
+  {
+  BYTE    nReboot = _parni( 1 );
+  EXOREGS sRegs;
+
+  sRegs.ax =  0x17 << 8;
+  sRegs.ax += nReboot;   // 00h - "Cold boot"
+                         // 01h - "Warm boot"
+  ExoRMInterrupt( INT_COMM, & sRegs, & sRegs );
+  }
+
+
+CLIPPER FosBlockRe()
+  {
+  WORD    nPort   = _parni( 1 );
+  WORD    nChars  = _parclen( 2 );
+  LPBYTE  cHigh   = _xalloclow( nChars );
+  LPBYTE  cLow    = ExoRealPtr( cHigh );
+  EXOREGS sRegs;
+
+  sRegs.es = FP_SEG( cLow );
+  sRegs.di = FP_OFF( cLow );
+  sRegs.cx = nChars;
+  sRegs.dx = nPort;
+  sRegs.ax = 0x18 << 8;
+  ExoRMInterrupt( INT_COMM, & sRegs, & sRegs );
+  _storclen( (LPSTR)cHigh, 2, nChars );
+  _xfreelow( cHigh );
+  _retni( sRegs.ax );
+  }
+
+
+CLIPPER FosBlockWr()
+  {
+  WORD    nPort   = _parni( 1 );
+  LPBYTE  cBuffer = (LPBYTE)_parc( 2 );
+  WORD    nChars  = _parclen( 2 );
+  LPBYTE  cHigh   = _xalloclow( nChars );
+  LPBYTE  cLow    = ExoRealPtr( cHigh );
+  EXOREGS sRegs;
+
+  _bcopy( cHigh, cBuffer, nChars );
+  sRegs.es = FP_SEG( cLow );
+  sRegs.di = FP_OFF( cLow );
+  sRegs.cx = nChars;
+  sRegs.dx = nPort;
+  sRegs.ax = 0x19 << 8;
+  ExoRMInterrupt( INT_COMM, & sRegs, & sRegs );
+  _xfreelow( cHigh );
+  _retni( sRegs.ax );
+  }
+
+
+CLIPPER FosBreak( void )
+  {
+  WORD    nPort  = _parni( 1 );
+  BYTE    nBreak = _parni( 2 );
+  EXOREGS sRegs;
+
+  sRegs.dx =  nPort;
+  sRegs.ax =  0x1A << 8;
+  sRegs.ax += nBreak;    // 01h - Start sending 'break'
+                         // 00h - Stop sending 'break'
+  ExoRMInterrupt( INT_COMM, & sRegs, & sRegs );
+  }
+
+
+CLIPPER FosInfo( void )
+  {
+  WORD          nPort  = _parni( 1 );
+  FOSSIL_INFO * cFosPM = _xalloclow( 19 );
+  FOSSIL_INFO * cFos   = ExoRealPtr( cFosPM );
+  EXOREGS       sRegs;
+
+  sRegs.es = FP_SEG( cFos );
+  sRegs.di = FP_OFF( cFos );
+  sRegs.cx = 19;
+  sRegs.dx = nPort;
+  sRegs.ax = 0x1B << 8;
+  ExoRMInterrupt( INT_COMM, & sRegs, & sRegs );
+  _reta( 10 );
+  _storni( cFosPM->MajVer,       -1,  1 );
+  _storni( cFosPM->MinVer,       -1,  2 );
+  _storc( (LPSTR)cFosPM->Notice, -1,  3 );
+  _storni( cFosPM->InSize,       -1,  4 );
+  _storni( cFosPM->InFree,       -1,  5 );
+  _storni( cFosPM->OuSize,       -1,  6 );
+  _storni( cFosPM->OuFree,       -1,  7 );
+  _storni( cFosPM->ScrWidth,     -1,  8 );
+  _storni( cFosPM->ScrHeight,    -1,  9 );
+  _storni( cFosPM->BaudRate,     -1, 10 );
+  _xfreelow( cFosPM );
+  }
+
+

@@ -1,0 +1,105 @@
+/* 
+------------------------------------------------------------------------
+FASTlib for Clipper, including all source code, examples and any other 
+file has been donated to Open Source community
+
+Manu Roibal. Bilbao, May 7 2011
+
+------------------------------------------------------------------------
+Please, contact me at	manuroibal@gmail.com
+Follow me at Twitter	@manuroibal on Twitter
+My Linkedin profile	www.linkedin.com/manuroibal
+
+Or visit my web site at	www.tonsofit.com
+------------------------------------------------------------------------
+*/
+
+
+#pragma inline
+
+#include "\libs\clipapi\clipapi.h"
+#include "\clip\bc\include\dos.h"
+#include "\libs\clipapi\linker.h"
+
+
+CLIPPER IsShare()
+  {
+  EXOREGS sRegs;
+
+  _fastForce();
+  sRegs.ax = 0x1000;
+  ExoRMInterrupt( INT_MISCEL, & sRegs, & sRegs );
+  _retl( ( ( sRegs.ax & 0xFF ) == 0xFF ) );
+  }
+
+
+CLIPPER IsNlsFunc()
+  {
+  EXOREGS sRegs;
+
+  sRegs.ax = 0x1400;
+  ExoRMInterrupt( INT_MISCEL, & sRegs, & sRegs );
+  _retl( ( ( sRegs.ax & 0xFF ) == 0xFF ) );
+  }
+
+
+CLIPPER IsAnsi()
+  {
+  EXOREGS sRegs;
+
+  sRegs.ax = 0x1A00;
+  ExoRMInterrupt( INT_MISCEL, & sRegs, & sRegs );
+  _retl( ( ( sRegs.ax & 0xFF ) == 0xFF ) );
+  }
+
+
+CLIPPER IsKeyb()
+  {
+  EXOREGS sRegs;
+
+  sRegs.ax = 0xAD80;
+  ExoRMInterrupt( INT_MISCEL, & sRegs, & sRegs );
+  _retl( ( ( sRegs.ax & 0xFF ) == 0xFF ) );
+  }
+
+
+CLIPPER IsXMS()
+  {
+  EXOREGS sRegs;
+
+  sRegs.ax = 0x4300;
+  ExoRMInterrupt( INT_MISCEL, & sRegs, & sRegs );
+  _retl( ( ( sRegs.ax & 0xFF ) == 0x80 ) );
+  }
+
+
+CLIPPER IsEMSHard()
+  {
+  EXOREGS sRegs;
+
+  sRegs.ax = 0x40 << 8;
+  ExoRMInterrupt( INT_EMS, & sRegs, & sRegs );
+  _retl( ( ( sRegs.ax >> 8 ) == 0x0 ) );
+  }
+
+
+CLIPPER IsQEMM()
+  {
+  EXOREGS sRegs;
+
+  sRegs.ax = 0xD200;
+  sRegs.bx = 0x5144;
+  sRegs.cx = 0x4D45;
+  sRegs.dx = 0x4D30;
+  ExoRMInterrupt( INT_MISCEL, & sRegs, & sRegs );
+  _retl( ( ( sRegs.ax & 0xFF ) == 0xFF ) );
+  }
+
+
+CLIPPER IsMSDOS()
+  {
+  _AX = 0x4452;
+  geninterrupt( INT_DOS );
+  _retl( ( _FLAGS & 1 ) );
+  }
+

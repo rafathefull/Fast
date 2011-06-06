@@ -1,0 +1,129 @@
+/* 
+------------------------------------------------------------------------
+FASTlib for Clipper, including all source code, examples and any other 
+file has been donated to Open Source community
+
+Manu Roibal. Bilbao, May 7 2011
+
+------------------------------------------------------------------------
+Please, contact me at	manuroibal@gmail.com
+Follow me at Twitter	@manuroibal on Twitter
+My Linkedin profile	www.linkedin.com/manuroibal
+
+Or visit my web site at	www.tonsofit.com
+------------------------------------------------------------------------
+*/
+
+
+#pragma inline
+
+#include "\libs\clipapi\clipapi.h"
+
+
+HIDE WORD InitPos( WORD nPos, WORD nDefault )
+  {
+  return( ( ( _parinfo( nPos ) == 0 ) ? nDefault : _parni( nPos ) ) );
+  }
+
+
+CLIPPER SaveScr()
+  {
+  WORD   nY1    = InitPos( 1, 0 );
+  WORD   nX1    = InitPos( 2, 0 );
+  WORD   nY2    = InitPos( 3, _gtMaxRow() );
+  WORD   nX2    = InitPos( 4, _gtMaxCol() );
+  WORD   nModo  = _parni( 5 );
+  WORD   nCursor;
+  WORD   nSize;
+  HANDLE hSeg;
+  LPBYTE cBuffer;
+  WORD   i;
+
+  _fastForce();
+  _gtGetCursor( & nCursor );
+  _gtSetCursor( 0 );
+  if( nModo == 1 || nModo == 2 )
+    {
+    _reta( nX2 - nX1 + 2 );
+    nSize   = ( nY2 - nY1 + 1 ) * 2;
+    hSeg    = _vAlloc( nSize, 0 );
+    cBuffer = _vLock( hSeg );
+    for( i = nX1; i <= nX2; i++ )
+      {
+      _gtSave( nY1, i, nY2, i, cBuffer );
+      _storclen( (LPSTR)cBuffer, nSize, -1, i - nX1 + 1 );
+      }
+    _storni( nModo, -1, i - nX1 + 1 );
+    _vUnLock( hSeg );
+    _vFree( hSeg );
+    }
+  else if( nModo == 3 || nModo == 4 )
+    {
+    _reta( nY2 - nY1 + 2 );
+    nSize   = ( nX2 - nX1 + 1 ) * 2;
+    hSeg    = _vAlloc( nSize, 0 );
+    cBuffer = _vLock( hSeg );
+    for( i = nY1; i <= nY2; i++ )
+      {
+      _gtSave( i, nX1, i, nX2, cBuffer );
+      _storclen( (LPSTR)cBuffer, nSize, -1, i - nY1 + 1 );
+      }
+    _storni( nModo, -1, i - nY1 + 1 );
+    _vUnLock( hSeg );
+    _vFree( hSeg );
+    }
+  _gtSetCursor( nCursor );
+  }
+
+
+
+CLIPPER RestScr()
+  {
+  int  nY1     = InitPos( 1, 0 );
+  int  nX1     = InitPos( 2, 0 );
+  int  nY2     = InitPos( 3, _gtMaxRow() );
+  int  nX2     = InitPos( 4, _gtMaxCol() );
+  WORD nDelay  = ( ( _parinfo( 6 ) == 0 ) ?  20 : _parni( 6 ) );
+  WORD nModo   = _parni( 5, _parinfa( 5, 0 ) );
+  WORD nCursor;
+  int  i;
+
+  _gtGetCursor( & nCursor );
+  _gtSetCursor( 0 );
+  switch ( nModo )
+    {
+    case 1 :
+      for ( i = nX1; i <= nX2; i++ )
+        {
+        _gtRest( nY1, i, nY2, i, (LPBYTE)_parc( 5, i - nX1 + 1 ) );
+        _fastWait( nDelay );
+        }
+      break;
+    case 2 :
+      for ( i = nX2; i >= nX1; i-- )
+        {
+        _gtRest( nY1, i, nY2, i, (LPBYTE)_parc( 5, i - nX1 + 1 ) );
+        _fastWait( nDelay );
+        }
+      break;
+    case 3 :
+      nDelay <<= 1;
+      for ( i = nY1; i <= nY2; i++ )
+        {
+        _gtRest( i, nX1, i, nX2, (LPBYTE)_parc( 5, i - nY1 + 1 ) );
+        _fastWait( nDelay );
+        }
+      break;
+    case 4 :
+      nDelay <<= 1;
+      for ( i = nY2; i >= nY1; i-- )
+        {
+        _gtRest( i, nX1, i, nX2, (LPBYTE)_parc( 5, i - nY1 + 1 ) );
+        _fastWait( nDelay );
+        }
+    }
+  _gtSetCursor( nCursor );
+  }
+
+
+

@@ -1,0 +1,115 @@
+/* 
+------------------------------------------------------------------------
+FASTlib for Clipper, including all source code, examples and any other 
+file has been donated to Open Source community
+
+Manu Roibal. Bilbao, May 7 2011
+
+------------------------------------------------------------------------
+Please, contact me at	manuroibal@gmail.com
+Follow me at Twitter	@manuroibal on Twitter
+My Linkedin profile	www.linkedin.com/manuroibal
+
+Or visit my web site at	www.tonsofit.com
+------------------------------------------------------------------------
+*/
+
+
+#pragma inline
+
+#include "\libs\clipapi\clipapi.h"
+#include "\clip\bc\include\dos.h"
+	
+
+CLIPPER IsHardDisk()
+  {
+  LPBYTE cValue;
+
+  _fastForce();
+  asm push ds
+  _AH = 0x1B;
+  geninterrupt( INT_DOS );
+  cValue = MK_FP( _DS, _BX );
+  asm pop ds
+  _retl( ( *cValue == 0xF8 ) );
+  }
+
+
+CLIPPER IsFloppy()
+  {
+  _BL = 0;
+  _AX = 0x4408;
+  geninterrupt( INT_DOS );
+  _retl( ( _AX == 0 ) );
+  }
+
+
+CLIPPER IsNetDev()
+  {
+  int nRet = 0;
+
+  _BX = 0;
+  _AX = 0x4409;
+  geninterrupt( INT_DOS );
+  if ( ! ( _FLAGS && 1 ) )
+    _DX &= 4096;
+  if( _DX != 4096 )
+    nRet = 1;
+  _retl( nRet );
+  }
+
+
+CLIPPER IsBootable()
+  {
+  LPBYTE pArea  = _xgrab( 513 );
+  BYTE   nError = 0;
+  int    nRet   = -1;
+
+  asm push es
+  while ( nRet == -1 )
+    {
+    _ES = FP_SEG( pArea );
+    _BX = FP_OFF( pArea );
+    _DX = _parni( 1 );
+    _CX = 0x1;
+    _AX = 0x201;
+    geninterrupt( INT_DISK );
+    if ( ! ( _FLAGS && 1 ) )
+      if ( pArea[ 510 ] == 0x55 && pArea[ 511 ] == 0xAA )
+        nRet = 1;
+      else
+        nRet = 0;
+    else
+      {
+      nError++;
+      if ( nError == 4 )
+        nRet = 0;
+      else
+        {
+        _AX = 0;
+        geninterrupt( INT_DISK );
+        }
+      }
+    }
+  asm pop es
+  _xfree( pArea );
+  _retl( nRet );
+  }
+
+
+CLIPPER DiskSize()
+  {
+  dspace cDisk;
+
+  _dspace( _parni( 1 ), &cDisk );
+  _retnl( _fastMul( _fastMul( cDisk.Clusters, cDisk.SectorsByClusters ), cDisk.BytesBySector ) );
+  }
+
+
+CLIPPER DiskFree()
+  {
+  dspace cDisk;
+
+  _dspace( _parni( 1 ), &cDisk );
+  _retnl( _fastMul( _fastMul( cDisk.FreeClusters, cDisk.SectorsByClusters ), cDisk.BytesBySector ) );
+  }

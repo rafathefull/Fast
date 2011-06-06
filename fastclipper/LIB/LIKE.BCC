@@ -1,0 +1,110 @@
+/* 
+------------------------------------------------------------------------
+FASTlib for Clipper, including all source code, examples and any other 
+file has been donated to Open Source community
+
+Manu Roibal. Bilbao, May 7 2011
+
+------------------------------------------------------------------------
+Please, contact me at	manuroibal@gmail.com
+Follow me at Twitter	@manuroibal on Twitter
+My Linkedin profile	www.linkedin.com/manuroibal
+
+Or visit my web site at	www.tonsofit.com
+------------------------------------------------------------------------
+*/
+
+
+#pragma inline
+
+#include "\libs\clipapi\clipapi.h"
+
+
+HIDE BOOL nComo( LPBYTE cMascara, LPBYTE cCadena );
+
+
+CLIPPER Like()
+  {
+  LPBYTE cMask = (LPBYTE)_parc( 1 );
+  WORD   nLen  = _parclen( 1 );
+  LPBYTE cNew  = _xgrab( nLen + 1 );
+  LPBYTE cCad  = (LPBYTE)_parc( 2 );
+  INDEX  nInd;
+  WORD   nAux;
+
+  _fastForce();
+  if ( ISCHAR( 1 ) && ISCHAR( 2 ) )
+    {
+    for( nInd = 0, nAux = 0; nInd < nLen; nInd++ )
+      if ( ! ( ( cMask[ nInd ] == '?' || cMask[ nInd ] == '*' ) && ( cMask[ nInd - 1 ] == '*' ) ) )
+        cNew[ nAux++ ] = cMask[ nInd ];
+    cNew[ nAux ] = 0x0;
+    _retl( nComo( cNew, cCad ) );
+    }
+  else
+    _retl( FALSE );
+  _xfree( cNew );
+  }
+
+
+HIDE BOOL nComo( LPBYTE cMascara, LPBYTE cCadena )
+  {
+  while ( *cMascara && *cCadena )
+    {
+    if( *cCadena == *cMascara || *cMascara == '?' )
+      {
+      cMascara++;
+      cCadena++;
+      }
+    else
+      {
+      switch ( *cMascara )
+        {
+        case ( '*' ):
+          cMascara++;
+          otra_vez:
+          if ( *cMascara )
+            {
+            while ( *cCadena != *cMascara && *cCadena )
+              cCadena++;
+            if ( *cCadena )
+              {
+              while( ( *cMascara == *cCadena || *cMascara == '?' ) && *cMascara && *cCadena )
+                {
+                cMascara++;
+                cCadena++;
+                }
+              if ( *cMascara == '*' || *cMascara == *cCadena )
+                {
+                cMascara++;
+                cCadena++;
+                }
+              else
+                {
+                if ( *cMascara == ' ' )
+                  {
+                  while ( *cMascara == ' ' && *cMascara )
+                    cMascara++;
+                  return( ! *cMascara );
+                  }
+                cCadena++;
+                goto otra_vez;
+                }
+              }
+            }
+          break;
+        case ( ' ' ):
+          while( *cMascara == ' ' && *cMascara )
+            cMascara++;
+          if ( ! *cMascara )
+            return( FALSE );
+          break;
+        default:
+          return( FALSE );
+        }
+      }
+    }
+  return ( ! *cMascara );
+  }
+
+

@@ -1,0 +1,55 @@
+/* 
+------------------------------------------------------------------------
+FASTlib for Clipper, including all source code, examples and any other 
+file has been donated to Open Source community
+
+Manu Roibal. Bilbao, May 7 2011
+
+------------------------------------------------------------------------
+Please, contact me at	manuroibal@gmail.com
+Follow me at Twitter	@manuroibal on Twitter
+My Linkedin profile	www.linkedin.com/manuroibal
+
+Or visit my web site at	www.tonsofit.com
+------------------------------------------------------------------------
+*/
+
+
+#pragma inline
+
+#include "\libs\clipapi\clipapi.h"
+#include "\clip\bc\include\dos.h"
+#include "\libs\clipapi\linker.h"
+
+
+CLIPPER DiskSerNum()
+  {
+  EXOREGS sRegs;
+  BYTE    cTable[ 16 ];
+  BYTE    cBuffer[ 9 ];
+  LPBYTE  cBuffRM;
+  LPBYTE  cBuffPM = _xalloclow( 25 );
+
+  _fastForce();
+  cBuffRM = ExoRealPtr( cBuffPM );
+  sRegs.ds = FP_SEG( cBuffRM );
+  sRegs.dx = FP_OFF( cBuffRM );
+  sRegs.bx = _parni( 1 );
+  sRegs.ax = 0x6900;
+  ExoRMInterrupt( INT_DOS, & sRegs, & sRegs );
+  _bcopy( cTable, (LPBYTE)"0123456789ABCDEF", 16 );
+  cBuffer[ 0 ] = cTable[ cBuffPM[ 5 ] >> 4 ];
+  cBuffer[ 1 ] = cTable[ cBuffPM[ 5 ] % 16 ];
+  cBuffer[ 2 ] = cTable[ cBuffPM[ 4 ] >> 4 ];
+  cBuffer[ 3 ] = cTable[ cBuffPM[ 4 ] % 16 ];
+  cBuffer[ 4 ] = '-';
+  cBuffer[ 5 ] = cTable[ cBuffPM[ 3 ] >> 4 ];
+  cBuffer[ 6 ] = cTable[ cBuffPM[ 3 ] % 16 ];
+  cBuffer[ 7 ] = cTable[ cBuffPM[ 2 ] >> 4 ];
+  cBuffer[ 8 ] = cTable[ cBuffPM[ 2 ] % 16 ];
+  _retclen( (LPSTR)cBuffer, 9 );
+  _xfreelow( cBuffPM );
+  }
+
+
+

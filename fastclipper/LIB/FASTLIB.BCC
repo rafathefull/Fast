@@ -1,0 +1,223 @@
+/* 
+------------------------------------------------------------------------
+FASTlib for Clipper, including all source code, examples and any other 
+file has been donated to Open Source community
+
+Manu Roibal. Bilbao, May 7 2011
+
+------------------------------------------------------------------------
+Please, contact me at	manuroibal@gmail.com
+Follow me at Twitter	@manuroibal on Twitter
+My Linkedin profile	www.linkedin.com/manuroibal
+
+Or visit my web site at	www.tonsofit.com
+------------------------------------------------------------------------
+*/
+
+
+#pragma inline
+
+#include "\libs\clipapi\clipapi.h"
+#include "\clip\bc\include\dos.h"
+#include "\libs\clipapi\linker.h"
+
+HIDE BOOL lSonido = TRUE;
+
+
+
+void _fastOutPortW( WORD nPort, WORD nValue )
+  {
+  asm mov dx, nPort
+  asm mov ax, nValue
+  asm out dx, ax
+  }
+
+
+void _fastOutPortB( WORD nPort, BYTE nValue )
+  {
+  asm mov dx, nPort
+  asm mov al, nValue
+  asm out dx, al
+  }
+
+
+WORD _fastInPortW( WORD nPort )
+  {
+  asm mov dx, nPort
+  asm in  ax, dx
+  return( _AX );
+  }
+
+
+BYTE _fastInPortB( WORD nPort )
+  {
+  asm mov dx, nPort
+  asm in  al, dx
+  return( _AL );
+  }
+
+
+void _fastRetrace( void )
+  {
+  asm mov dx,0x3da
+et1:
+  asm {
+    in  al,dx
+    and al,8
+    jz  et1
+    }
+et2:
+  asm {
+    in  al,dx
+    and al,8
+    jnz et2
+    }
+  }
+
+
+BOOL _fastKey()
+  {
+  asm mov ax,0100h
+  geninterrupt( INT_KEYBOARD );
+  asm pushf
+  asm pop ax
+  return( ( ( _AX & 64 ) == 0 ) );
+  }
+
+
+void _fastProcKey()
+  {
+  asm mov ax,0000
+  geninterrupt( INT_KEYBOARD );
+  }
+
+
+WORD _fastMax( WORD n1, WORD n2 )
+  {
+  return( ( ( n2 > n1 ) ? n2 : n1 ) );
+  }
+
+
+WORD _fastMin( WORD n1, WORD n2 )
+  {
+  return( ( ( n2 < n1 ) ? n2 : n1 ) );
+  }
+
+
+void _fastWait( WORD nDelay )
+  {
+  DWORD nNow = FliGetClock();
+
+  while( nNow + nDelay > FliGetClock() );
+  }
+
+
+CLIPPER oneMoment()
+  {
+  _fastWait( _parni( 1 ) );
+  }
+
+
+void _fastColor( LPBYTE cColor, COLOR * sColor )
+  {
+  WORD  nColor = 0;
+
+  CParse( (LPSTR)cColor, & nColor, sColor );
+  }
+
+
+void _fastStr( LPBYTE cBuffer, BYTE nAL )
+  {
+  _AL = nAL;
+  asm {
+    aam
+    mov cl, al
+    mov al, ah
+    aam
+    add ah, 0x30
+    add al, 0x30
+    add cl, 0x30
+    }
+  cBuffer[ 0 ] = _AL;
+  cBuffer[ 1 ] = _CL;
+  }
+
+
+void _fastStrHex( LPBYTE cBuffer, BYTE nAL )
+  {
+  cBuffer[ 0 ] = '0' + ( nAL >> 4 );
+  cBuffer[ 1 ] = '0' + ( nAL & 15 );
+  }
+
+
+BOOL _fastIsSound()
+  {
+  return( lSonido );
+  }
+
+
+CLIPPER IsSound()
+  {
+  BOOL lRet = lSonido;
+
+  _fastForce();
+  if ( _parinfo( 0 ) == 1 )
+    lSonido = _parl( 1 );
+  _retl( lRet );
+  }
+
+
+void _fastSetPalette( LPSTR cPalGif, WORD nLen )
+  {
+  INDEX nInd;
+
+  _fastRetrace();
+  asm push ds
+  asm push si
+  asm lds  si, dword ptr cPalGif
+  for ( nInd = 0; nInd < nLen; nInd++ )
+    {
+    asm mov  dx, 0x3c8
+    asm mov  ax, nInd
+    asm out  dx, al
+    asm inc  dx
+    asm mov  cx, 3
+eti_2:
+    asm mov  al, byte ptr ds:[ si ]
+    asm out  dx, al
+    asm inc  si
+    asm loop eti_2
+    }
+  asm pop  si
+  asm pop  ds
+  }
+
+
+void _fastGetPalette( LPBYTE cPalette )
+  {
+  INDEX  nInd;
+
+  _fastRetrace();
+  asm push ds
+  asm push si
+  asm lds  si, dword ptr cPalette
+  for ( nInd = 0; nInd < 256; nInd++ )
+    {
+    asm mov  dx, 0x3c7
+    asm mov  ax, nInd
+    asm out  dx, al
+    asm inc  dx
+    asm inc  dx
+    asm mov  cx, 3
+eti_1:
+    asm in   al, dx
+    asm mov  byte ptr ds:[ si ], al
+    asm inc  si
+    asm loop eti_1
+    }
+  asm pop  si
+  asm pop  ds
+  }
+
+
+

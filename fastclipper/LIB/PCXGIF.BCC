@@ -1,0 +1,226 @@
+/* 
+------------------------------------------------------------------------
+FASTlib for Clipper, including all source code, examples and any other 
+file has been donated to Open Source community
+
+Manu Roibal. Bilbao, May 7 2011
+
+------------------------------------------------------------------------
+Please, contact me at	manuroibal@gmail.com
+Follow me at Twitter	@manuroibal on Twitter
+My Linkedin profile	www.linkedin.com/manuroibal
+
+Or visit my web site at	www.tonsofit.com
+------------------------------------------------------------------------
+*/
+
+
+#pragma inline
+
+#include "\libs\clipapi\clipapi.h"
+#include "\clip\bc\include\dos.h"
+
+
+HIDE BYTE cGrBuffer[ 128 ];
+
+HIDE WORD grInfo( void );
+HIDE WORD cToi( BYTE, BYTE );
+HIDE WORD GifClr( void );
+
+
+CLIPPER gifIsGIF()
+  {
+  _fastForce();
+  if ( grInfo() )
+    _retl( ( cGrBuffer[ 0 ] == 'G' ) && ( cGrBuffer[ 1 ] == 'I' ) && ( cGrBuffer[ 2 ] == 'F' ) );
+  }
+
+
+CLIPPER gifVersion()
+  {
+  if ( grInfo() )
+    _retclen( (LPSTR)cGrBuffer, 6 );
+  }
+
+
+CLIPPER gifX()
+  {
+  if ( grInfo() )
+    _retni( cToi( 6, 7 ) );
+  }
+
+
+CLIPPER gifY()
+  {
+  if ( grInfo() )
+    _retni( cToi( 8, 9 ) );
+  }
+
+
+CLIPPER gifIsPalet()
+  {
+  if ( grInfo() )
+    _retl( cGrBuffer[ 10 ] );
+  }
+
+
+CLIPPER gifColors()
+  {
+  if ( grInfo() )
+    _retni( GifClr() );
+  }
+
+
+CLIPPER SearchVESA()
+  {
+  int nX, nY, nC, nModo;
+
+  if ( grInfo() )
+    {
+    nX = cToi( 6, 7 );
+    nY = cToi( 8, 9 );
+    nC = GifClr();
+    switch ( nX )
+      {
+      case 640 :
+        nModo = ( nY == 400 ) ? 256 : 257;
+        break;
+      case 800 :
+        nModo = ( nC ==  16 ) ? 258 : 259;
+        break;
+      case 1024 :
+        nModo = ( nC ==  16 ) ? 260 : 261;
+        break;
+      case 1280 :
+        nModo = ( nC ==  16 ) ? 262 : 263;
+        break;
+      }
+    _retni( nModo );
+    }
+  }
+
+
+CLIPPER pcxIsPCX()
+  {
+  if ( grInfo() )
+    _retl( cGrBuffer[ 0 ] == 10 );
+  }
+
+
+CLIPPER pcxVersion()
+  {
+  if ( grInfo() )
+    switch ( cGrBuffer[ 1 ] )
+      {
+      case 0 :
+        _retc( "2.5" );
+        break;
+      case 2:
+      case 3:
+        _retc( "2.8" );
+        break;
+      case 5:
+        _retc( "3.0" );
+        break;
+      }
+  }
+
+
+CLIPPER pcxBitsPix()
+  {
+  if ( grInfo() )
+    _retni( cGrBuffer[ 3 ] );
+  }
+
+
+CLIPPER pcxX1()
+  {
+  if ( grInfo() )
+    _retni( cToi( 4, 5 ) );
+  }
+
+
+CLIPPER pcxY1()
+  {
+  if ( grInfo() )
+    _retni( cToi( 6, 7 ) );
+  }
+
+
+CLIPPER pcxX2()
+  {
+  if ( grInfo() )
+    _retni( cToi( 8, 9 ) );
+  }
+
+
+CLIPPER pcxY2()
+  {
+  if ( grInfo() )
+    _retni( cToi( 10, 11 ) );
+  }
+
+
+CLIPPER pcxResH()
+  {
+  if ( grInfo() )
+    _retni( cToi( 12, 13 ) );
+  }
+
+
+CLIPPER pcxResV()
+  {
+  if ( grInfo() )
+    _retni( cToi( 14, 15 ) );
+  }
+
+
+CLIPPER pcxPlanes()
+  {
+  if ( grInfo() )
+    _retni( cGrBuffer[ 65 ] );
+  }
+
+
+CLIPPER pcxPalette()
+  {
+  if ( grInfo() )
+    _retclen( (LPSTR)cGrBuffer + 16, 48 );
+  }
+
+
+HIDE WORD grInfo()
+  {
+  int  nHandle = _topen ( _parc( 1 ), 64 );
+  WORD nRet    = 0;
+
+  if ( nHandle > 0 )
+    {
+    if ( _tread ( nHandle, cGrBuffer, 128 ) == 128 )
+      nRet = 1;
+    _tclose( nHandle );
+    }
+  return( nRet );
+  }
+
+
+HIDE WORD cToi( BYTE n1, BYTE n2 )
+  {
+  return( cGrBuffer[ n1 ] + cGrBuffer[ n2 ] * 256 );
+  }
+
+
+HIDE WORD GifClr()
+  {
+  WORD  nRet = 1;
+  WORD  nAux = 2;
+  INDEX nInd;
+
+  nRet += ( cGrBuffer[ 10 ] && 1 ) ? 1 : 0;
+  nRet += ( cGrBuffer[ 10 ] && 2 ) ? 2 : 0;
+  nRet += ( cGrBuffer[ 10 ] && 4 ) ? 4 : 0;
+  for ( nInd = 2; nInd <= nRet; nInd++ )
+    nAux *= 2;
+  return( nAux );
+  }
+

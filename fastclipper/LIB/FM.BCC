@@ -1,0 +1,170 @@
+/* 
+------------------------------------------------------------------------
+FASTlib for Clipper, including all source code, examples and any other 
+file has been donated to Open Source community
+
+Manu Roibal. Bilbao, May 7 2011
+
+------------------------------------------------------------------------
+Please, contact me at	manuroibal@gmail.com
+Follow me at Twitter	@manuroibal on Twitter
+My Linkedin profile	www.linkedin.com/manuroibal
+
+Or visit my web site at	www.tonsofit.com
+------------------------------------------------------------------------
+*/
+
+
+#pragma inline
+
+#include "\libs\clipapi\clipapi.h"
+#include "\clip\bc\include\dos.h"
+
+
+typedef struct {
+    unsigned char SoundCharacteristic[2];
+    unsigned char Level[2];
+    unsigned char AttackDecay[2];
+    unsigned char SustainRelease[2];
+    unsigned char WaveSelect[2];
+    unsigned char Feedback;
+} FM_Instrument;
+
+typedef struct {
+    unsigned char sing[ 4 ];
+    unsigned char name[ 32 ];
+    unsigned char inst[ 9 ];
+} FM_SBI;
+
+
+
+HIDE void WriteFM( int chip, int addr, BYTE data )
+  {
+  register int ChipAddr = _sbIOAddr + ( ( chip ) ? 0x2 : 0x0 );
+
+  outportb( ChipAddr, addr );
+  inportb( ChipAddr );
+  outportb( ChipAddr + 1, data );
+  inportb( ChipAddr );
+  inportb( ChipAddr );
+  inportb( ChipAddr );
+  inportb( ChipAddr );
+  }
+
+
+
+CLIPPER FMReset()
+  {
+  WriteFM( 0, 1, 0 );
+  WriteFM( 1, 1, 0 );
+  }
+
+
+
+CLIPPER FMKeyOff()
+  {
+  int  voice = _parni( 1 );
+  BYTE reg_num;
+  int  chip = voice / 11;
+
+  reg_num = 0xB0 + voice % 11;
+  WriteFM( chip, reg_num, 0 );
+  }
+
+
+
+CLIPPER FMKeyOn()
+  {
+  int  voice  = _parni( 1 );
+  int  freq   = _parni( 2 );
+  int  octave = _parni( 3 );
+  BYTE reg_num;
+  BYTE tmp;
+  int  chip = voice / 11;
+
+  reg_num = 0xB0 + voice % 11;
+  WriteFM( chip, reg_num, 0 );
+  reg_num = 0xa0 + voice % 11;
+  WriteFM( chip, reg_num, freq & 0xff );
+  reg_num = 0xb0 + voice % 11;
+  tmp = ( freq >> 8 ) | ( octave << 2 ) | 0x20;
+  WriteFM( chip, reg_num, tmp );
+  }
+
+
+
+CLIPPER FMSetVoice()
+  {
+  BYTE op_cell_num;
+  int  cell_offset;
+  int  voice_num = _parni( 1 );
+  int  chip = voice_num / 11;
+  FM_Instrument ins;
+
+  _bcopy( (LPBYTE)( & ins ), (LPBYTE)_parc( 2 ), sizeof( FM_Instrument ) );
+  voice_num %= 11;
+  cell_offset = voice_num % 3 + ((voice_num / 3) << 3);
+  op_cell_num = 0x20 + (char)cell_offset;
+  WriteFM(chip,op_cell_num,ins.SoundCharacteristic[0]);
+  op_cell_num += 3;
+  WriteFM(chip,op_cell_num,ins.SoundCharacteristic[1]);
+  op_cell_num = 0x40 + (char)cell_offset;
+  WriteFM(chip,op_cell_num,ins.Level[0]);
+  op_cell_num += 3;
+  WriteFM(chip,op_cell_num,ins.Level[1]);
+  op_cell_num = 0x60 + (char)cell_offset;
+  WriteFM(chip,op_cell_num,ins.AttackDecay[0]);
+  op_cell_num += 3;
+  WriteFM(chip,op_cell_num,ins.AttackDecay[1]);
+  op_cell_num = 0x80 + (char)cell_offset;
+  WriteFM(chip,op_cell_num,ins.SustainRelease[0]);
+  op_cell_num += 3;
+  WriteFM(chip,op_cell_num, ins.SustainRelease[1]);
+  op_cell_num = 0xE0 + (char)cell_offset;
+  WriteFM(chip,op_cell_num,ins.WaveSelect[0]);
+  op_cell_num += 3;
+  WriteFM(chip,op_cell_num,ins.WaveSelect[1]);
+  op_cell_num = (unsigned char)0xC0 + (unsigned char)voice_num;
+  WriteFM(chip,op_cell_num,ins.Feedback);
+  }
+
+
+
+
+CLIPPER FMDelay()
+  {
+  WORD nTime = _parni( 1 );
+  WORD nHigh;
+  WORD nLow;
+
+  _fastForce();
+  _AH = 0x0;
+  geninterrupt( 0x1A );
+  asm add dx, nTime
+  asm adc cx, 000h
+  asm mov nLow,dx
+  asm mov nHigh,cx
+salto1:
+  _AH = 0x0;
+  geninterrupt( 0x1A );
+  asm cmp dx,nLow
+  asm jnz salto1
+  asm cmp cx,nHigh
+  asm jnz salto1
+  }
+
+
+CLIPPER FMLoadSBI()
+  {
+  int    hHandle = _topen( _parc( 1 ), 64 );
+  FM_SBI sbi;
+
+  if ( hHandle != -1 )
+    {
+    _tread( hHandle, (LPBYTE)( & sbi ), sizeof( FM_SBI ) );
+    _tclose( hHandle );
+    _reta( 2 );
+    _storc( (LPSTR)sbi.name, -1, 1 );
+    _storclen( (LPSTR)sbi.inst, 9, -1, 2 );
+    }
+  }

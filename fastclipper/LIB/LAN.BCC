@@ -1,0 +1,54 @@
+/* 
+------------------------------------------------------------------------
+FASTlib for Clipper, including all source code, examples and any other 
+file has been donated to Open Source community
+
+Manu Roibal. Bilbao, May 7 2011
+
+------------------------------------------------------------------------
+Please, contact me at	manuroibal@gmail.com
+Follow me at Twitter	@manuroibal on Twitter
+My Linkedin profile	www.linkedin.com/manuroibal
+
+Or visit my web site at	www.tonsofit.com
+------------------------------------------------------------------------
+*/
+
+
+#pragma inline
+
+#include "\libs\clipapi\clipapi.h"
+#include "\clip\bc\include\dos.h"
+#include "\libs\clipapi\linker.h"
+
+
+CLIPPER IsMSLAN()
+  {
+  EXOREGS sRegs;
+
+  _fastForce();
+  sRegs.ax = 0x0 << 8;
+  ExoRMInterrupt( INT_LAN, & sRegs, & sRegs );
+  _retl( ( ( sRegs.ax >> 8 ) != 0x0 ) );
+  }
+
+
+CLIPPER IsLANtasti()
+  {
+  EXOREGS sRegs;
+
+  sRegs.ax = 0x0 << 8;
+  ExoRMInterrupt( INT_LAN, & sRegs, & sRegs );
+  _retl( ( ( sRegs.ax >> 8 ) != 0x0 ) );
+  }
+
+
+CLIPPER IsBanyan()
+  {
+  EXOREGS sRegs;
+
+  sRegs.ax = 0xD701;
+  ExoRMInterrupt( INT_MISCEL, & sRegs, & sRegs );
+  _retl( sRegs.ax == 0 );
+  }
+

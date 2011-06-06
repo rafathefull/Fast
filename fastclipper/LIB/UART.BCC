@@ -1,0 +1,58 @@
+/* 
+------------------------------------------------------------------------
+FASTlib for Clipper, including all source code, examples and any other 
+file has been donated to Open Source community
+
+Manu Roibal. Bilbao, May 7 2011
+
+------------------------------------------------------------------------
+Please, contact me at	manuroibal@gmail.com
+Follow me at Twitter	@manuroibal on Twitter
+My Linkedin profile	www.linkedin.com/manuroibal
+
+Or visit my web site at	www.tonsofit.com
+------------------------------------------------------------------------
+*/
+
+
+#include "\libs\clipapi\clipapi.h"
+#include "\clip\bc\include\dos.h"
+
+
+
+
+HIDE BYTE ComPortType( BYTE nComX )
+  {
+  BYTE   nRet    = 0;
+  LPWORD PortAdr = (LPWORD)( vPointerBios );
+
+  _fastForce();
+  if ( ( PortAdr[ nComX ] == 0 ) || ( ( inportb( PortAdr[ nComX ] + 2 ) ) & 0x30 ) != 0 )
+    nRet = 0;
+  else
+    {
+    outportb( PortAdr[ nComX ] + 2, 1 );
+    if ( ( inportb( PortAdr[ nComX ] + 2 ) & 0xC0 ) == 0xC0 )
+      nRet = 3;
+    else if ( ( inportb( PortAdr[ nComX ] + 2 ) & 0x80 ) == 0x80 )
+      nRet = 4;
+    else
+      {
+      outportb( PortAdr[ nComX ] + 7, 0xAA );
+      if ( inportb( PortAdr[ nComX ] + 7 ) == 0xAA )
+        nRet = 2;
+      else
+        nRet = 1;
+      }
+    }
+  return( nRet );
+  }
+
+
+CLIPPER UARTType()
+  {
+  WORD nUART = _parni( 1 );
+
+  if ( nUART > 0 && nUART < 5 )
+    _retni( ComPortType( nUART - 1 ) );
+  }

@@ -1,0 +1,95 @@
+/* 
+------------------------------------------------------------------------
+FASTlib for Clipper, including all source code, examples and any other 
+file has been donated to Open Source community
+
+Manu Roibal. Bilbao, May 7 2011
+
+------------------------------------------------------------------------
+Please, contact me at	manuroibal@gmail.com
+Follow me at Twitter	@manuroibal on Twitter
+My Linkedin profile	www.linkedin.com/manuroibal
+
+Or visit my web site at	www.tonsofit.com
+------------------------------------------------------------------------
+*/
+
+
+#pragma inline
+
+#include "\libs\clipapi\clipapi.h"
+
+
+HIDE BYTE _FastBits_[ 8 ] = { 1, 2, 4, 8, 16, 32, 64, 128 };
+
+
+CLIPPER IsBit()
+  {
+  LPBYTE cInByte = (LPBYTE)_parc( 1 );
+
+  _fastForce();
+  if ( PCOUNT == 2 )
+    _retl( ( cInByte[ 0 ] & _FastBits_[ _parni( 2 ) ] ) );
+  }
+
+
+CLIPPER SetBit()
+  {
+  LPBYTE cInByte = (LPBYTE)_parc( 1 );
+
+  if ( PCOUNT == 2 )
+    {
+    cInByte[ 0 ] |= _FastBits_[ _parni( 2 ) ];
+    _retclen( (LPSTR)cInByte, 1 );
+    }
+  }
+
+
+CLIPPER DelBit()
+  {
+  LPBYTE cInByte = (LPBYTE)_parc( 1 );
+
+  if ( PCOUNT == 2 )
+    {
+    cInByte[ 0 ] &= 255 - _FastBits_[ _parni( 2 ) ];
+    _retclen( (LPSTR)cInByte, 1 );
+    }
+  }
+
+
+CLIPPER ByteOr()
+  {
+  LPBYTE cInByte1 = (LPBYTE)_parc( 1 );
+  LPBYTE cInByte2 = (LPBYTE)_parc( 2 );
+
+  if ( PCOUNT == 2 )
+    {
+    cInByte1[ 0 ] |= cInByte2[ 0 ];
+    _retclen( (LPSTR)cInByte1, 1 );
+    }
+  }
+
+
+CLIPPER ByteAnd()
+  {
+  LPBYTE cInByte1 = (LPBYTE)_parc( 1 );
+  LPBYTE cInByte2 = (LPBYTE)_parc( 2 );
+
+  if ( PCOUNT == 2 )
+    {
+    cInByte1[ 0 ] &= cInByte2[ 0 ];
+    _retclen( (LPSTR)cInByte1, 1 );
+    }
+  }
+
+
+CLIPPER ByteNot()
+  {
+  LPBYTE cInByte = (LPBYTE)_parc( 1 );
+
+  if ( PCOUNT == 1 )
+    {
+    cInByte[ 0 ] = 255 - cInByte[ 0 ];
+    _retclen( (LPSTR)cInByte, 1 );
+    }
+  }

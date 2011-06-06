@@ -1,0 +1,58 @@
+/* 
+------------------------------------------------------------------------
+FASTlib for Clipper, including all source code, examples and any other 
+file has been donated to Open Source community
+
+Manu Roibal. Bilbao, May 7 2011
+
+------------------------------------------------------------------------
+Please, contact me at	manuroibal@gmail.com
+Follow me at Twitter	@manuroibal on Twitter
+My Linkedin profile	www.linkedin.com/manuroibal
+
+Or visit my web site at	www.tonsofit.com
+------------------------------------------------------------------------
+*/
+
+
+#include "\libs\clipapi\clipapi.h"
+
+
+#define BUFF_LEN    16384
+
+
+CLIPPER FCopy()
+  {
+  int    nHandleDesde;
+  int    nHandleHasta;
+  WORD   nLeidos    = 0xFFFF;
+  HANDLE nHandleMem = _vAlloc( BUFF_LEN, 0 );
+  LPBYTE cBuffer    = _vLock( nHandleMem );
+  WORD   nError;
+
+  nHandleDesde = _topen( _parc( 1 ), 64 );
+  nError = _terror;
+  if ( nError == 0 )
+    {
+    nHandleHasta = _tcreat( _parc( 2 ), 0 );
+    nError = _terror;
+    if ( nError == 0 )
+      {
+      while( nLeidos > 0 && nError == 0 )
+        {
+        nLeidos = _tread( nHandleDesde, cBuffer, BUFF_LEN );
+        nError = _terror;
+        if ( nError == 0 )
+          {
+          _twrite( nHandleHasta, cBuffer, nLeidos );
+          nError = _terror;
+          }
+        }
+      _tclose( nHandleDesde );
+      _tclose( nHandleHasta );
+      }
+    }
+  _vUnLock( nHandleMem );
+  _vFree( nHandleMem );
+  _retni( nError );
+  }

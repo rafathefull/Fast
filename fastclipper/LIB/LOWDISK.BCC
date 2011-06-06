@@ -1,0 +1,143 @@
+/* 
+------------------------------------------------------------------------
+FASTlib for Clipper, including all source code, examples and any other 
+file has been donated to Open Source community
+
+Manu Roibal. Bilbao, May 7 2011
+
+------------------------------------------------------------------------
+Please, contact me at	manuroibal@gmail.com
+Follow me at Twitter	@manuroibal on Twitter
+My Linkedin profile	www.linkedin.com/manuroibal
+
+Or visit my web site at	www.tonsofit.com
+------------------------------------------------------------------------
+*/
+
+
+#pragma inline
+
+#include "\libs\clipapi\clipapi.h"
+#include "\clip\bc\include\dos.h"
+#include "\libs\clipapi\linker.h"
+
+typedef struct {
+  char cBasura1[ 20 ];
+  char cSerial[ 20 ];
+  char cBasura2[ 6 ];
+  char cFirm[ 8 ];
+  char cModel[ 40 ];
+  char cBasura3[ 418 ];
+  } DiskSerialStruct;
+
+
+HIDE void ide_info( int nDrive, DiskSerialStruct * cDriveInfo )
+  {
+  _bset( (LPBYTE)cDriveInfo, 0, 512 );
+  asm MOV DX, 0x3F6
+  asm XOR AL, AL
+  asm OUT DX, AL
+espera1:
+  asm MOV DX, 0x1F7
+  asm IN AL, DX
+  asm TEST AL, 128
+  asm JNZ espera1
+  asm MOV DX, 0x1F6
+  if ( nDrive )
+    asm MOV AL, 0xB0
+  else
+    asm MOV AL, 0xA0
+  asm OUT DX, AL
+  asm MOV DX, 0x1F7
+  asm MOV AL, 0xEC
+  asm OUT DX, AL
+espera2:
+  asm MOV DX, 0x1F7
+  asm IN  AL, DX
+  asm TEST AL,8
+  asm JZ espera2
+  asm MOV CX,256
+  asm LES DI, cDriveInfo
+  asm MOV DX, 0x1F0;
+GLOOP:
+  asm IN AX,DX
+  asm XCHG AH,AL
+  asm STOSW
+  asm LOOP GLOOP
+espera3:
+  asm MOV DX, 0x1F7
+  asm IN AL, DX
+  asm TEST AL, 128
+  asm JNZ espera3
+  asm MOV DX, 0x3F6
+  asm MOV AL, 2
+  asm OUT DX,AL
+  }
+
+
+CLIPPER LowDiskSer()
+  {
+  DiskSerialStruct cDriveInfo;
+
+  _fastForce();
+  ide_info( 0, & cDriveInfo );
+  _retclen( cDriveInfo.cSerial, 20 );
+  }
+
+
+CLIPPER LowDiskFir()
+  {
+  DiskSerialStruct cDriveInfo;
+
+  ide_info( 0, & cDriveInfo );
+  _retclen( cDriveInfo.cFirm,8  );
+  }
+
+
+CLIPPER LowDiskMod()
+  {
+  DiskSerialStruct cDriveInfo;
+
+  ide_info( 0, & cDriveInfo );
+  _retclen( cDriveInfo.cModel, 40 );
+  }
+
+
+CLIPPER LowDiskInf()
+  {
+  WORD    nDisk    = _parni( 1 );
+  WORD    nMaxDisk = vPointerBios[ 0x75 ];
+  EXOREGS sRegs;
+  BYTE    nByte1, nByte2, nByte3;
+
+  if ( nDisk >= nMaxDisk )
+    {
+    _reta( 3 );
+    _storni( 0, -1, 1 );
+    _storni( 0, -1, 2 );
+    _storni( 0, -1, 3 );
+    }
+  else
+    {
+    sRegs.ax = 0x8 << 8;
+    sRegs.dx = 0x80 + nDisk;
+    if ( ! ( ExoRMInterrupt( INT_DISK, & sRegs, & sRegs ) & 1 ) )
+      {
+      nByte1 = sRegs.dx >> 8;
+      nByte2 = sRegs.cx;
+      nByte3 = sRegs.cx >> 8;
+      _reta( 3 );
+      _storni( nByte1 + 1,                          -1, 1 );  // cabezas - 1
+      _storni( ((nByte2 & 0xC0) << 2) + nByte3 + 2, -1, 2 );
+              // +1 porque arranca desde 0 y m s 1 para que fdisk chute
+      _storni( nByte2 & 0x3F,                       -1, 3 );  // sectores en los bits 5-0
+      }
+    }
+  }
+
+
+CLIPPER NumDisks()
+  {
+  _retni( vPointerBios[ 0x75 ] );
+  }
+

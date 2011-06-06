@@ -1,0 +1,425 @@
+/*
+------------------------------------------------------------------------
+FASTlib for Clipper, including all source code, examples and any other
+file has been donated to Open Source community
+
+Manu Roibal. Bilbao, May 7 2011
+
+------------------------------------------------------------------------
+Please, contact me at	manuroibal@gmail.com
+Follow me at Twitter	@manuroibal on Twitter
+My Linkedin profile	www.linkedin.com/manuroibal
+
+Or visit my web site at	www.tonsofit.com
+------------------------------------------------------------------------
+*/
+
+
+#pragma inline
+
+#include "\libs\clipapi\clipapi.h"
+#include "\clip\bc\include\dos.h"
+
+
+#define CLKCTL_IOADDR       0x43
+#define CLKT0_DATA_IOADDR   0x40
+#define CLKT1_DATA_IOADDR   0x41
+#define CLKT2_DATA_IOADDR   0x42
+#define CLKCTL_TMD0         0x36
+
+#define IRQCTL_IOADDR       0x20
+#define IRQCTL_MASK         0x20
+
+#define CLK_VECT            0x08
+
+#define MAX_BUF_LEN         16384
+#define LPT1                0x378
+#define LPT2                0x278
+
+
+HIDE BYTE lpt_sample_byte_array_1[ 1 ];
+HIDE BYTE lpt_sample_byte_array_2[ 1 ];
+
+HIDE BYTE *lpt_sample_buf[] =
+  {
+  lpt_sample_byte_array_1,
+  lpt_sample_byte_array_2,
+  NULL
+  };
+
+HIDE WORD    lpt_cur_byte_pos = 0;
+HIDE WORD    lpt_max_byte_pos[ 3 ];
+HIDE int     toggle = 0;
+HIDE BOOL    lpt_output_finished = FALSE;
+HIDE BOOL    lpt_eof = FALSE;
+HIDE WORD    lpt_io_address = LPT1;
+
+HIDE int     irq_counter;
+HIDE int     clk_factor;
+HIDE int     re_enter_flag;
+HIDE int     re_enter_flag_A;
+
+HIDE DWORD   clk_period_fast;
+
+HIDE WORD    _sbPort;
+     WORD    _sbIOAddr = 0x220;
+HIDE WORD    _sbIRQ    = 0x7;
+HIDE HANDLE  hHandle1;
+HIDE HANDLE  hHandle2;
+HIDE BOOL    lWaitKey;
+
+
+HIDE void lpt_service_sample_output_speaker( void );
+HIDE void lpt_service_sample_output_dac( void );
+HIDE void lpt_service_sample_output_sb( void );
+HIDE void lpt_read_file( int, BYTE *, WORD * );
+
+HIDE void interrupt far clkirq8h(void);
+HIDE void (interrupt far * near old_clkirq)(void);
+HIDE void (*aux_clkfnc)(void);
+HIDE void (*aux_clkfnc_A)(void) = NULL;
+
+HIDE unsigned char TablaBase[ 256 ] =
+  { 0x40,0x40,0x40,0x40,0x40,0x40,0x40,0x40,
+    0x40,0x40,0x3F,0x3F,0x3F,0x3F,0x3F,0x3F,
+    0x3F,0x3F,0x3F,0x3F,0x3F,0x3F,0x3E,0x3E,
+    0x3E,0x3E,0x3E,0x3E,0x3E,0x3E,0x3E,0x3E,
+    0x3D,0x3D,0x3D,0x3D,0x3D,0x3D,0x3D,0x3D,
+    0x3D,0x3C,0x3C,0x3C,0x3C,0x3C,0x3C,0x3C,
+    0x3C,0x3C,0x3C,0x3B,0x3B,0x3B,0x3B,0x3B,
+    0x3B,0x3B,0x3B,0x3B,0x3B,0x3A,0x3A,0x3A,
+    0x3A,0x3A,0x3A,0x3A,0x3A,0x3A,0x3A,0x39,
+    0x39,0x39,0x39,0x39,0x39,0x39,0x39,0x39,
+    0x39,0x38,0x38,0x38,0x38,0x38,0x38,0x38,
+    0x38,0x37,0x37,0x37,0x37,0x37,0x36,0x36,
+    0x36,0x36,0x35,0x35,0x35,0x35,0x34,0x34,
+    0x34,0x33,0x33,0x32,0x32,0x31,0x31,0x30,
+    0x30,0x2F,0x2E,0x2D,0x2C,0x2B,0x2A,0x29,
+    0x28,0x27,0x26,0x25,0x24,0x23,0x22,0x21,
+    0x20,0x1F,0x1E,0x1D,0x1C,0x1B,0x1A,0x19,
+    0x18,0x17,0x16,0x15,0x14,0x13,0x12,0x11,
+    0x11,0x10,0x10,0x0F,0x0F,0x0E,0x0E,0x0D,
+    0x0D,0x0D,0x0C,0x0C,0x0C,0x0C,0x0B,0x0B,
+    0x0B,0x0B,0x0A,0x0A,0x0A,0x0A,0x0A,0x09,
+    0x09,0x09,0x09,0x09,0x09,0x09,0x09,0x09,
+    0x08,0x08,0x08,0x08,0x08,0x08,0x08,0x08,
+    0x08,0x08,0x08,0x08,0x07,0x07,0x07,0x07,
+    0x07,0x07,0x07,0x06,0x06,0x06,0x06,0x06,
+    0x06,0x06,0x06,0x06,0x06,0x06,0x05,0x05,
+    0x05,0x05,0x05,0x05,0x05,0x05,0x05,0x05,
+    0x04,0x04,0x04,0x04,0x04,0x04,0x04,0x04,
+    0x04,0x04,0x03,0x03,0x03,0x03,0x03,0x03,
+    0x03,0x03,0x03,0x03,0x02,0x02,0x02,0x02,
+    0x02,0x02,0x02,0x02,0x02,0x01,0x01,0x01,
+    0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01 };
+
+
+HIDE void initclk_1( void (*clock_func)(void), void (*clock_func_A)(void), int clock_factor )
+  {
+  void (interrupt far * current_irq)();
+  WORD clk_init;
+
+  clk_factor  = clock_factor;
+  clk_init    = (WORD)clk_period_fast - 1;
+  current_irq = _fastGetVect( CLK_VECT );
+  disable();
+  if( current_irq != clkirq8h )
+    {
+    outportb( CLKCTL_IOADDR, CLKCTL_TMD0 );
+    outportb( CLKT0_DATA_IOADDR, (int) 0xff & ( clk_init ) );
+    outportb( CLKT0_DATA_IOADDR, (int) clk_init >> 8 );
+    irq_counter = clk_factor;
+    aux_clkfnc = clock_func;
+    aux_clkfnc_A = clock_func_A;
+    old_clkirq = current_irq;
+    _fastSetVect( CLK_VECT, clkirq8h );
+    re_enter_flag = 0;
+    re_enter_flag_A = 0;
+    }
+  else
+    {
+    aux_clkfnc = clock_func;
+    aux_clkfnc_A = clock_func_A;
+    }
+  enable();
+  }
+
+
+HIDE void initclk( void (*clock_func_A)(void), int clock_factor )
+  {
+  initclk_1( NULL, clock_func_A, clock_factor );
+  }
+
+
+HIDE void restclk( void )
+  {
+  void (interrupt far * current_irq)();
+
+  current_irq = _fastGetVect( CLK_VECT );
+  disable();
+  if( current_irq == clkirq8h )
+    {
+    outportb( CLKCTL_IOADDR, CLKCTL_TMD0 );
+    outportb( CLKT0_DATA_IOADDR, 0xff );
+    outportb( CLKT0_DATA_IOADDR, 0xff );
+    _fastSetVect( CLK_VECT, old_clkirq );
+    }
+  disable();
+  }
+
+
+HIDE void interrupt far clkirq8h( void )
+  {
+  int slow_irq;
+
+  slow_irq = --irq_counter;
+  if( ! slow_irq )
+    ( *old_clkirq )();
+  else
+    outportb( IRQCTL_IOADDR, IRQCTL_MASK );
+  if( ( aux_clkfnc_A != NULL ) && ( ! re_enter_flag_A ) )
+    {
+    re_enter_flag_A = 1;
+    enable();
+    ( *aux_clkfnc_A )();
+    disable();
+    re_enter_flag_A = 0;
+    }
+  if( ! slow_irq )
+    {
+    irq_counter = clk_factor;
+    if( ! re_enter_flag )
+      {
+      re_enter_flag = 1;
+      enable();
+      if( ( aux_clkfnc != NULL ) )
+        ( *aux_clkfnc )();
+      re_enter_flag = 0;
+      disable();
+      }
+    }
+  }
+
+
+HIDE void lpt_service_sample_output_speaker( void )
+  {
+  outportb( 0x42, TablaBase[ (unsigned char)((*(lpt_sample_buf[ toggle ] + lpt_cur_byte_pos++ ) ) ) ] << 1 );
+  if( ! ( lpt_max_byte_pos[ toggle ] - lpt_cur_byte_pos ) )
+    {
+    lpt_cur_byte_pos = 0;
+    lpt_output_finished = TRUE;
+    }
+  }
+
+
+HIDE void lpt_service_sample_output_dac( void )
+  {
+  outportb( lpt_io_address, (int)( ( *(lpt_sample_buf[ toggle ] + lpt_cur_byte_pos++ ) ) / 2 ) );
+  if( ! ( lpt_max_byte_pos[ toggle ] - lpt_cur_byte_pos ) )
+    {
+    lpt_cur_byte_pos = 0;
+    lpt_output_finished = TRUE;
+    }
+  }
+
+
+HIDE void lpt_service_sample_output_sb( void )
+  {
+  while( inportb( _sbPort ) & 0x80 );
+  outportb( _sbPort, 0x10 );
+  while( inportb( _sbPort ) & 0x80 );
+  outportb( _sbPort, (char)( ( *(lpt_sample_buf[ toggle ] + lpt_cur_byte_pos++ ) ) ) );
+  if( ! ( lpt_max_byte_pos[ toggle ] - lpt_cur_byte_pos ) )
+    {
+    lpt_cur_byte_pos = 0;
+    lpt_output_finished = TRUE;
+    }
+  }
+
+
+HIDE void lpt_read_file( int fp, BYTE * lpt_file_array, WORD * lpt_max_pos )
+  {
+  WORD max_fill_len = 0;
+
+  if( 0 < ( max_fill_len = _tread( fp, lpt_file_array, MAX_BUF_LEN ) ) )
+    *(lpt_max_pos) = max_fill_len;
+  else
+    lpt_eof = TRUE;
+  }
+
+
+
+HIDE WORD Sound( LPSTR filename, WORD lpt_sample_rate, WORD nMode )
+  {
+  int handle;
+
+  if ( ( handle = _topen( filename, 64 ) ) == -1 )
+    return( 0 );
+  hHandle1 = _vAlloc( MAX_BUF_LEN + 1, 0 );
+  hHandle2 = _vAlloc( MAX_BUF_LEN + 1, 0 );
+  lpt_sample_buf[ 0 ] = _vLock( hHandle1 );
+  lpt_sample_buf[ 1 ] = _vLock( hHandle2 );
+  lpt_cur_byte_pos = toggle = 0;
+  lpt_output_finished = lpt_eof = FALSE;
+  lpt_read_file( handle, lpt_sample_buf[ toggle ], & lpt_max_byte_pos[ toggle ] );
+  switch ( nMode )
+    {
+    case 1 :
+      initclk( lpt_service_sample_output_dac, lpt_sample_rate );
+      break;
+    case 2 :
+      outportb( 0x61, inportb( 0x61 ) | 3 );
+      outportb( 0x43, 0xb6 );
+      outportb( 0x42, 0x0 );
+      outportb( 0x42, 0x0 );
+      outportb( 0x43, 0x90 );
+      initclk( lpt_service_sample_output_speaker, lpt_sample_rate );
+      break;
+    case 3 :
+      _sbPort = _sbIOAddr + 0xC;
+      while( inportb( _sbPort ) & 0x80 );
+      outportb( _sbPort, 0xd1 );
+      initclk( lpt_service_sample_output_sb, lpt_sample_rate );
+      break;
+    }
+  while( ! lpt_eof )
+    {
+    lpt_read_file( handle, lpt_sample_buf[ 1 - toggle ], & lpt_max_byte_pos[ 1 - toggle ] );
+    while( ! lpt_output_finished );
+      {
+      if ( lWaitKey && _fastKey() )
+        {
+        _fastProcKey();
+        lpt_eof = TRUE;
+        }
+      }
+    toggle = 1 - toggle;
+    lpt_output_finished = FALSE;
+    }
+  restclk();
+  switch ( nMode )
+    {
+    case 2 :
+      outportb( 0x61, inportb( 0x61 ) & 0xfd );
+      break;
+    case 3 :
+      while( inportb( _sbPort ) & 0x80 );
+      outportb( _sbPort, 0xd3 );
+      break;
+    }
+  _tclose( handle );
+  _vUnLock( hHandle1 );
+  _vUnLock( hHandle2 );
+  _vFree( hHandle1 );
+  _vFree( hHandle2 );
+  return( 1 );
+  }
+
+
+HIDE int SoundSupport( LPSTR cFichero, WORD nRate, WORD nMode )
+  {
+  _fastForce();
+  if ( nRate == 0 )
+    nRate = 12000;
+  clk_period_fast = _fastDiv( 1048576L, nRate );
+  return( Sound( cFichero, (WORD)_fastMul( nRate, 0.05 ), nMode ) );
+  }
+
+
+CLIPPER DacPort()
+  {
+  WORD puerto = _parni(1);
+  WORD old    = lpt_io_address;;
+
+  if ( PCOUNT > 0 )
+    {
+    if ( puerto == 1 )
+      lpt_io_address = LPT1;
+    else if ( puerto == 2 )
+      lpt_io_address = LPT2;
+    }
+  _retni( old );
+  }
+
+
+CLIPPER sbInit()
+  {
+  WORD nDir = _sbIOAddr + 6;
+  BYTE nCont = 100;
+
+  outportb( nDir, 1 );
+  inportb( nDir );
+  inportb( nDir );
+  inportb( nDir );
+  inportb( nDir );
+  outportb( nDir, 0 );
+  nDir += 4;
+  do {
+    nCont--;
+  } while( ( nCont > 0 ) && ( inportb( nDir ) != 0xAA ) );
+  _retl( nCont != 0 );
+  }
+
+
+CLIPPER sbIO()
+  {
+  WORD nRet = _sbIOAddr;
+
+  if ( PCOUNT == 1 )
+    _sbIOAddr = _parni( 1 );
+  _retni( nRet );
+  }
+
+
+CLIPPER sbIRQ()
+  {
+  WORD nRet = _sbIRQ;
+
+  if ( PCOUNT == 1 )
+    _sbIRQ = _parni( 1 );
+  _retni( nRet );
+  }
+
+
+CLIPPER dacVocPlay()
+  {
+  lWaitKey = _parl( 3 );
+  _retl( SoundSupport( _parc( 1 ), _parni( 2 ), 1 ) );
+  }
+
+
+CLIPPER dacWavPlay()
+  {
+  lWaitKey = _parl( 3 );
+  _retl( SoundSupport( _parc( 1 ), _parni( 2 ), 1 ) );
+  }
+
+
+CLIPPER spkVocPlay()
+  {
+  lWaitKey = _parl( 3 );
+  _retl( SoundSupport( _parc( 1 ), _parni( 2 ), 2 ) );
+  }
+
+
+CLIPPER spkWavPlay()
+  {
+  lWaitKey = _parl( 3 );
+  _retl( SoundSupport( _parc( 1 ), _parni( 2 ), 2 ) );
+  }
+
+
+CLIPPER sbVocPlay()
+  {
+  lWaitKey = _parl( 3 );
+  _retl( SoundSupport( _parc( 1 ), _parni( 2 ), 3 ) );
+  }
+
+
+CLIPPER sbWavPlay()
+  {
+  lWaitKey = _parl( 3 );
+  _retl( SoundSupport( _parc( 1 ), _parni( 2 ), 3 ) );
+  }
+
+
